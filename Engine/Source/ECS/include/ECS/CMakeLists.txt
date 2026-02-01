@@ -4,5 +4,6 @@ target_sources(ECS
         BASE_DIRS ${PROJECT_SOURCE_DIR}/include
         FILES
         Entity.h
+        Ids.h
         World.h
 )

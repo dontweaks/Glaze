@@ -7,14 +7,11 @@
 
 namespace glaze::ecs {
 	struct World {
-		using ID = uint32_t;
-
 		Entity create_empty();
 
 		template<Bundle B>
-		Entity create_entity(B&& bundle)
-		{
-			return Entity{Entity::Index{}};
+		Entity create_entity(B&& bundle) {
+			return Entity{EntityIndex{0}};
 		}
 
 		template<Component ... Cs> requires (sizeof ... (Cs) > 0)
@@ -49,6 +46,6 @@ namespace glaze::ecs {
 		}
 
 	private:
-		ID m_id{};
+		WorldId m_id{0};
 	};
 }
