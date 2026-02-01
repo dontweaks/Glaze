@@ -1,18 +1,25 @@
 #pragma once
 
+#include "Bundle/Bundle.h"
+#include "Component/Component.h"
+
+#include "Entity.h"
+
 namespace glaze::ecs {
 	struct World {
+		using ID = uint32_t;
+
 		Entity create_empty();
 
 		template<Bundle B>
 		Entity create_entity(B&& bundle)
 		{
-			return Entity{EntityIndex{}};
+			return Entity{Entity::Index{}};
 		}
 
 		template<Component ... Cs> requires (sizeof ... (Cs) > 0)
 		Entity create_entity(Cs&& ... cs) {
-			return create_entity(TupleBundle{ std::forward_as_tuple(std::forward<Cs>(cs)...) });
+			return create_entity(TupleBundle(cs...));
 		}
 
 		bool destroy_entity(const Entity entity);
@@ -22,7 +29,7 @@ namespace glaze::ecs {
 
 		template<Component ... Cs> requires (sizeof ... (Cs) > 0)
 		void add_components(const Entity entity, Cs&& ... cs) {
-			return add_bundle(entity, TupleBundle{std::forward_as_tuple<Cs>(cs)...});
+			return add_bundle(entity, TupleBundle{ std::forward_as_tuple(std::forward<Cs>(cs)...) });
 		}
 
 		template<Bundle B>
@@ -42,6 +49,6 @@ namespace glaze::ecs {
 		}
 
 	private:
-		WorldId m_id{};
+		ID m_id{};
 	};
 }

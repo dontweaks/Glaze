@@ -3,6 +3,5 @@ target_sources(ECS
         FILE_SET HEADERS
         BASE_DIRS ${PROJECT_SOURCE_DIR}/include
         FILES
-        Entity.h
-        World.h
+        Bundle.h
 )
