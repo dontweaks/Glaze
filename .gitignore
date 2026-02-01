@@ -1,0 +1,34 @@
+# VS files and folders
+.vs/
+**.sln
+**.vcxproj
+**.vcxproj.filters
+**.vcxproj.user
+**.csproj
+**.nsight-gfxproj
+**.DotSettings
+**.user
+
+# JetBrains / CLion
+**/.idea/
+**/.iml
+**/cmake-*/
+
+# CMake Common build
+**/build/
+**/out/
+
+# vcpkg
+vcpkg/installed/
+vcpkg/buildtrees/
+vcpkg/packages/
+vcpkg/downloads/
+vcpkg/archives/
+vcpkg/locks/
+
+# Tools / caches
+.vscode/
+*.code-workspace
+build/
+.venv/
+__pycache__/
