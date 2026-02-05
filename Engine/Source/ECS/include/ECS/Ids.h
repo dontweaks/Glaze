@@ -10,4 +10,6 @@ namespace glaze::ecs {
 	static constexpr EntityVersion FIRST_ENTITY_VERSION{0};
 
 	using WorldId = utils::StrongId<struct WorldIdTag, uint64_t>;
+
+	using ComponentId = utils::StrongId<struct ComponentIdTag, uint64_t>;
 }
