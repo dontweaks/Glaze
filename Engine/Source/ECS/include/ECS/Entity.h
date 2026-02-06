@@ -34,21 +34,21 @@ namespace glaze::ecs {
 
 	struct EntityManager {
 		struct Slot {
-			EntityIndex next{0};
+			EntityIndex next = EntityIndex::INVALID_VALUE;
 			EntityVersion version = FIRST_ENTITY_VERSION;
 		};
 
 		[[nodiscard]] Entity create_entity() {
 			if (m_destroyed == 0) {
 				const auto [next, version] = m_slots.emplace_back(EntityIndex::from_index(m_slots.size()));
-				m_head = next;
 				return Entity{next, version};
 			}
 
-			auto& [next, version] = m_slots[m_head.to_index()];
-			std::swap(m_head, next);
+			const EntityIndex index = m_head;
+			auto& [next, version] = m_slots[index.to_index()];
+			m_head = next;
 			m_destroyed--;
-			return Entity{next, version};
+			return Entity{index, version};
 		}
 
 		bool destroy_entity(const Entity entity) noexcept {
@@ -62,7 +62,8 @@ namespace glaze::ecs {
 				return false;
 			}
 
-			std::swap(m_head, next);
+			next = m_head;
+			m_head = entity.index();
 			++version;
 			m_destroyed++;
 
@@ -78,6 +79,20 @@ namespace glaze::ecs {
 			return Entity{index, version};
 		}
 
+		[[nodiscard]] bool is_valid(const Entity entity) const noexcept {
+			const auto index = entity.index().get();
+			if (index >= m_slots.size()) {
+				return false;
+			}
+
+			const auto [next, version] = m_slots[index];
+			if (version != entity.version()) {
+				return false;
+			}
+
+			return true;
+		}
+
 		[[nodiscard]] size_t size() const noexcept {
 			return m_slots.size() - m_destroyed;
 		}
@@ -89,13 +104,13 @@ namespace glaze::ecs {
 		void clear() noexcept {
 			m_slots.clear();
 			m_destroyed = 0;
-			m_head = EntityIndex{0};
+			m_head = EntityIndex::INVALID_VALUE;
 		}
 
 	private:
 		std::vector<Slot> m_slots;
 		size_t m_destroyed = 0;
-		EntityIndex m_head{};
+		EntityIndex m_head = EntityIndex::INVALID_VALUE;
 	};
 }
 
