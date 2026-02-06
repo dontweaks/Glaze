@@ -10,7 +10,7 @@ namespace glaze::utils {
 		static_assert(std::is_nothrow_move_constructible_v<T>);
 		static_assert(std::is_nothrow_move_assignable_v<T>);
 		if (vec.size() <= index) {
-			panic("swap_remove index is ouf of range");
+			panic("swap_remove index is out of range");
 		}
 
 		T val = std::exchange(vec[index], std::move(vec.back()));

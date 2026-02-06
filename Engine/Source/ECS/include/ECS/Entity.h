@@ -7,25 +7,25 @@
 #include "Ids.h"
 
 namespace glaze::ecs {
-	struct [[nodiscard]] Entity {
+	struct Entity {
 		constexpr explicit Entity(const EntityIndex index, const EntityVersion version = FIRST_ENTITY_VERSION) noexcept
 			: m_index(index), m_version(version) {
 		}
 
-		constexpr static Entity from_id(const EntityID id) noexcept {
+		[[nodiscard]] constexpr static Entity from_id(const EntityID id) noexcept {
 			const auto index = EntityIndex(id.get());
 			const auto version = EntityVersion(static_cast<uint32_t>(id.get() >> 32));
 			return Entity{ index, version };
 		}
 
-		constexpr EntityID to_id() const noexcept {
+		[[nodiscard]] constexpr EntityID to_id() const noexcept {
 			return EntityID { static_cast<uint64_t>(m_index.get()) | static_cast<uint64_t>(m_version.get()) << 32 };
 		}
 
-		constexpr EntityIndex index() const noexcept { return m_index; }
-		constexpr EntityVersion version() const noexcept { return m_version; }
+		[[nodiscard]] constexpr EntityIndex index() const noexcept { return m_index; }
+		[[nodiscard]] constexpr EntityVersion version() const noexcept { return m_version; }
 
-		constexpr auto operator<=>(const Entity& other) const noexcept { return to_id() <=> other.to_id(); }
+		[[nodiscard]] constexpr auto operator<=>(const Entity& other) const noexcept { return to_id() <=> other.to_id(); }
 
 	private:
 		EntityIndex m_index;

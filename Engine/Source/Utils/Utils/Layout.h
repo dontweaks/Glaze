@@ -4,14 +4,14 @@
 #include <format>
 
 namespace glaze::utils {
-	struct [[nodiscard]] Layout {
+	struct Layout {
 		template<typename T>
-		static consteval Layout of() noexcept { return Layout { sizeof(T), alignof(T) }; }
+		[[nodiscard]] static consteval Layout of() noexcept { return Layout { sizeof(T), alignof(T) }; }
 
-		constexpr size_t size() const noexcept { return m_size; }
-		constexpr size_t align() const noexcept { return m_align; }
+		[[nodiscard]] constexpr size_t size() const noexcept { return m_size; }
+		[[nodiscard]] constexpr size_t align() const noexcept { return m_align; }
 
-		constexpr auto operator<=>(const Layout&) const noexcept = default;
+		[[nodiscard]] constexpr auto operator<=>(const Layout&) const noexcept = default;
 
 	private:
 		consteval Layout(const size_t size, const size_t alignment) noexcept

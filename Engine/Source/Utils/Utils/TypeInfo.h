@@ -35,22 +35,22 @@ namespace glaze::utils {
 		}
 
 		template<auto Id>
-		struct [[nodiscard]] Counter {
+		struct Counter {
 			using Tag = Counter;
 
 			struct Generator {
-				friend consteval auto is_defined(Tag) noexcept {
+				[[nodiscard]] friend consteval auto is_defined(Tag) noexcept {
 					return true;
 				}
 			};
 			friend consteval auto is_defined(Tag) noexcept;
 
 			template<typename T = Tag, auto = is_defined(T{})>
-			static consteval auto exist(auto) noexcept {
+			[[nodiscard]] static consteval auto exist(auto) noexcept {
 				return true;
 			}
 
-			static consteval auto exist(...) noexcept {
+			[[nodiscard]] static consteval auto exist(...) noexcept {
 				return Generator(), false;
 			}
 		};
@@ -93,7 +93,7 @@ namespace glaze::utils {
 		constexpr operator std::string_view() const noexcept { return value; }
 	};
 
-	struct [[nodiscard]] TypeInfo {
+	struct TypeInfo {
 		template<typename T>
 		explicit constexpr TypeInfo(std::in_place_type_t<T>) noexcept
 			: m_hash(TypeHash<T>::value),
@@ -103,22 +103,22 @@ namespace glaze::utils {
 		constexpr TypeInfo() = default;
 
 		template<typename T>
-		static consteval TypeInfo of() noexcept {
+		[[nodiscard]] static consteval TypeInfo of() noexcept {
 			return TypeInfo(std::in_place_type<T>);
 		}
 
-		constexpr uint64_t hash() const noexcept {
+		[[nodiscard]] constexpr uint64_t hash() const noexcept {
 			return m_hash;
 		}
 
-		constexpr std::string_view name() const noexcept {
+		[[nodiscard]] constexpr std::string_view name() const noexcept {
 			return m_name;
 		}
 
-		constexpr auto operator<=>(const TypeInfo&) const = default;
+		[[nodiscard]] constexpr auto operator<=>(const TypeInfo&) const = default;
 
 	private:
-		uint64_t m_hash;
+		uint64_t m_hash{};
 		std::string_view m_name;
 	};
 
