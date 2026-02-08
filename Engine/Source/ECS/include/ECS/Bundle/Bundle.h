@@ -32,27 +32,33 @@ namespace glaze::ecs {
 		{ bundle.components() };
 	};
 
+	template<Bundle B>
+	using BundleComponentTypes = std::remove_cvref_t<decltype(std::declval<B>().components())>;
+
 	template<Component... Cs>
 	struct ComponentBundle {
 		std::tuple<Cs...> m_components;
 
-		auto components() && { return std::move(m_components); }
-		auto components() & = delete;
+		constexpr auto components() && { return std::move(m_components); }
+		constexpr auto components() & = delete;
 	};
 
 	template<Bundle B>
-	void visit_bundle(B&& bundle, auto&& func) {
+	constexpr void visit_bundle(B&& bundle, auto&& func) {
 		std::apply([&]<Component... Cs>(Cs&& ... components) {
 			(func(std::forward<Cs>(components)), ...);
-		}, std::move(bundle).components());
+		}, std::forward<B>(bundle).components());
 	}
 
 	template<Bundle B>
-	void visit_bundle_types(auto&& func) {
-		using ComponentTuple = std::remove_cvref_t<decltype(std::declval<B>().components())>;
-
+	constexpr void visit_bundle_types(auto&& func) {
 		[]<Component... Cs>(auto&& f, std::type_identity<std::tuple<Cs...>>) {
 			(f.template operator()<Cs>(), ...);
-		}(func, std::type_identity<ComponentTuple>{});
+		}(func, std::type_identity<BundleComponentTypes<B>>{});
+	}
+
+	template<Bundle B>
+	[[nodiscard]] consteval size_t bundle_components_count() noexcept {
+        return std::tuple_size_v<BundleComponentTypes<B>>;
 	}
 }

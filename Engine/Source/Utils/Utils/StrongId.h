@@ -7,6 +7,7 @@
 namespace glaze::utils {
 	template<typename Tag, std::unsigned_integral I>
 	struct StrongId {
+		using Type = I;
 		static constexpr auto MIN = std::numeric_limits<I>::min();
 		static constexpr auto MAX = std::numeric_limits<I>::max();
 
@@ -47,3 +48,10 @@ namespace glaze::utils {
 	template<typename Tag, std::unsigned_integral I>
 	constexpr StrongId<Tag, I> StrongId<Tag, I>::INVALID_VALUE = StrongId(MAX);
 }
+
+template<typename Tag, std::integral I>
+struct std::hash<glaze::utils::StrongId<Tag, I>> {
+	[[nodiscard]] size_t operator()(const glaze::utils::StrongId<Tag, I> v) const noexcept {
+		return std::hash<I>{}(v.get());
+	}
+};

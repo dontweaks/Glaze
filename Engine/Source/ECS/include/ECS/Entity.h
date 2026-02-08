@@ -7,6 +7,13 @@
 #include "Ids.h"
 
 namespace glaze::ecs {
+	struct EntityLocation {
+		ArchetypeId archetype_id;
+		ArchetypeRow archetype_row;
+		TableId table_id;
+		TableRow table_row;
+	};
+
 	struct Entity {
 		constexpr explicit Entity(const EntityIndex index, const EntityVersion version = FIRST_ENTITY_VERSION) noexcept
 			: m_index(index), m_version(version) {
