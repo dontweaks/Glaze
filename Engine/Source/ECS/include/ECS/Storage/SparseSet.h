@@ -61,7 +61,7 @@ namespace glaze::ecs {
 			}
 
 			const size_t off = page_offset(pos);
-			auto out = page->erase(off);
+			auto out = page->remove(off);
 			if (!out) {
 				return std::nullopt;
 			}
