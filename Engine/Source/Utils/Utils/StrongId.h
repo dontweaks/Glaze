@@ -11,14 +11,7 @@ namespace glaze::utils {
 		static constexpr auto MIN = std::numeric_limits<I>::min();
 		static constexpr auto MAX = std::numeric_limits<I>::max();
 
-		static const StrongId INVALID_VALUE;
-
-		[[nodiscard]] static constexpr StrongId from_index(const size_t index) noexcept {
-			if (index >= static_cast<std::size_t>(MAX)) [[unlikely]] {
-				return INVALID_VALUE;
-			}
-			return StrongId{static_cast<I>(index)};
-		}
+		[[nodiscard]] static constexpr StrongId from_index(const size_t index) noexcept;
 		[[nodiscard]] constexpr size_t to_index() const noexcept { return static_cast<size_t>(m_value); }
 
 		constexpr StrongId() noexcept = default;
@@ -45,8 +38,24 @@ namespace glaze::utils {
 		I m_value = MAX;
 	};
 
-	template<typename Tag, std::unsigned_integral I>
-	constexpr StrongId<Tag, I> StrongId<Tag, I>::INVALID_VALUE = StrongId(MAX);
+	struct NullId {
+		template<typename Tag, std::unsigned_integral I>
+		[[nodiscard]] constexpr operator StrongId<Tag, I>() const noexcept { return StrongId<Tag, I>{}; }
+		[[nodiscard]] constexpr bool operator==([[maybe_unused]] const NullId other) const noexcept { return true; }
+
+		template<typename Tag, std::unsigned_integral I>
+		[[nodiscard]] constexpr auto operator<=>(const StrongId<Tag, I> other) const noexcept { return other <=> StrongId<Tag, I>(*this); }
+	};
+
+	inline constexpr NullId null_id{};
+
+	template <typename Tag, std::unsigned_integral I>
+	constexpr StrongId<Tag, I> StrongId<Tag, I>::from_index(const size_t index) noexcept {
+		if (index >= static_cast<size_t>(MAX)) [[unlikely]] {
+			return null_id;
+		}
+		return StrongId{static_cast<I>(index)};
+	}
 }
 
 template<typename Tag, std::integral I>

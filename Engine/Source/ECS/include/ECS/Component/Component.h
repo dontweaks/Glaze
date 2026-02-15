@@ -11,17 +11,20 @@
 #include "Utils/TypeInfo.h"
 
 namespace glaze::ecs {
-	enum struct StorageType {
+	enum struct StorageType : uint8_t {
 		Table,
 		SparseSet
 	};
 
 	template<typename T>
-	concept HasStorageType = requires {
+	concept Component = std::is_standard_layout_v<std::remove_cvref_t<T>>;
+
+	template<typename T>
+	concept HasStorageType = Component<T> && requires {
 		{ std::remove_cvref_t<T>::STORAGE_TYPE } -> std::convertible_to<StorageType>;
 	};
 
-	template<typename T>
+	template<Component T>
 	[[nodiscard]] consteval StorageType get_storage_type() noexcept {
 		if constexpr (HasStorageType<T>) {
 			return T::STORAGE_TYPE;
@@ -29,9 +32,6 @@ namespace glaze::ecs {
 			return StorageType::Table;
 		}
 	}
-
-	template<typename T>
-	concept Component = std::is_standard_layout_v<std::remove_cvref_t<T>>;
 
 	struct ComponentDesc {
 		template<Component T>
@@ -74,6 +74,12 @@ namespace glaze::ecs {
 			: m_id(id), m_desc(desc) {
 		}
 
+		ComponentInfo(const ComponentInfo& other) = delete;
+		ComponentInfo& operator=(const ComponentInfo& other) = delete;
+
+		ComponentInfo(ComponentInfo&& other) noexcept = default;
+		ComponentInfo& operator=(ComponentInfo&& other) noexcept = default;
+
 		[[nodiscard]] ComponentId id() const noexcept { return m_id; }
 		[[nodiscard]] std::string_view name() const noexcept { return m_desc.m_name; }
 		[[nodiscard]] StorageType storage_type() const noexcept { return m_desc.m_storage_type; }
@@ -88,21 +94,26 @@ namespace glaze::ecs {
 		ComponentDesc m_desc;
 	};
 
-	using ComponentInfos = std::vector<ComponentInfo>;
-	using ComponentIdTypeInfoMap = std::unordered_map<utils::TypeInfo, ComponentId>;
-
 	struct ComponentManager {
+		ComponentManager() = default;
+
+		ComponentManager(const ComponentManager& other) = delete;
+		ComponentManager& operator=(const ComponentManager& other) = delete;
+
+		ComponentManager(ComponentManager&& other) = delete;
+		ComponentManager& operator=(ComponentManager&& other) = delete;
+
 		template<Component T>
 		ComponentId register_component() {
 			constexpr auto type_id = utils::TypeInfo::of<std::remove_cvref_t<T>>();
-			const auto indices_it = m_type_info_map.find(type_id);
-			if (indices_it != m_type_info_map.end()) {
+			const auto indices_it = m_components_map.find(type_id);
+			if (indices_it != m_components_map.end()) {
 				return indices_it->second;
 			}
 
 			const auto id = ComponentId::from_index(m_components.size());
 			m_components.emplace_back(id, ComponentDesc::of<T>());
-			m_type_info_map.emplace(type_id, id);
+			m_components_map.emplace(type_id, id);
 
 			return id;
 		}
@@ -112,10 +123,10 @@ namespace glaze::ecs {
 			return get_id(utils::TypeInfo::of<std::remove_cvref_t<T>>());
 		}
 
-		[[nodiscard]] ComponentId get_id(const utils::TypeInfo& type_info) const noexcept {
-			const auto it = m_type_info_map.find(type_info);
-			if (it == m_type_info_map.end()) {
-				return ComponentId::INVALID_VALUE;
+		[[nodiscard]] ComponentId component_id(const utils::TypeInfo& type_info) const noexcept {
+			const auto it = m_components_map.find(type_info);
+			if (it == m_components_map.end()) {
+				return utils::null_id;
 			}
 			return it->second;
 		}
@@ -149,16 +160,11 @@ namespace glaze::ecs {
 			return id.to_index() < m_components.size() && id.valid();
 		}
 
-		[[nodiscard]] size_t size() const noexcept {
-			return m_components.size();
-		}
-
-		[[nodiscard]] bool empty() const noexcept {
-			return m_components.empty();
-		}
+		[[nodiscard]] size_t size() const noexcept { return m_components.size(); }
+		[[nodiscard]] bool empty() const noexcept { return m_components.empty(); }
 
 	private:
-		ComponentInfos m_components;
-		ComponentIdTypeInfoMap m_type_info_map;
+		std::vector<ComponentInfo> m_components;
+		utils::TypeInfoMap<ComponentId> m_components_map;
 	};
 }

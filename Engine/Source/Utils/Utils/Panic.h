@@ -6,7 +6,7 @@
 #include <source_location>
 
 namespace glaze::utils {
-	[[noreturn]] constexpr void panic_impl(const char* msg) noexcept {
+	[[noreturn]] inline void panic_impl(const char* msg) noexcept {
 		std::fputs(msg, stderr);
 		std::abort();
 	}
@@ -23,7 +23,7 @@ namespace glaze::utils {
 	};
 
 	template <typename... Args>
-	[[noreturn]] constexpr void panic(PanicFormat<std::type_identity_t<Args>...> fmt, Args &&...args) noexcept {
+	[[noreturn]] void panic(PanicFormat<std::type_identity_t<Args>...> fmt, Args &&...args) noexcept {
 		auto user_msg = std::format(fmt.fmt, std::forward<Args>(args)...);
 		auto msg = std::format("{}:{} panic: {}\n", fmt.loc.file_name(), fmt.loc.line(), user_msg);
 		panic_impl(msg.c_str());

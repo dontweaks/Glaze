@@ -1,4 +1,5 @@
 #pragma once
+#include <cassert>
 #include <cstdint>
 #include <format>
 #include <optional>
@@ -41,18 +42,27 @@ namespace glaze::ecs {
 
 	struct EntityManager {
 		struct Slot {
-			EntityIndex next = EntityIndex::INVALID_VALUE;
+			EntityIndex next = utils::null_id;;
 			EntityVersion version = FIRST_ENTITY_VERSION;
+			EntityLocation location;
 		};
+
+		EntityManager() = default;
+
+		EntityManager(const EntityManager& other) = delete;
+		EntityManager& operator=(const EntityManager& other) = delete;
+
+		EntityManager(EntityManager&& other) = delete;
+		EntityManager& operator=(EntityManager&& other) = delete;
 
 		[[nodiscard]] Entity create_entity() {
 			if (m_destroyed == 0) {
-				const auto [next, version] = m_slots.emplace_back(EntityIndex::from_index(m_slots.size()));
+				const auto& [next, version, location] = m_slots.emplace_back(EntityIndex::from_index(m_slots.size()));
 				return Entity{next, version};
 			}
 
 			const EntityIndex index = m_head;
-			auto& [next, version] = m_slots[index.to_index()];
+			auto& [next, version, location] = m_slots[index.to_index()];
 			m_head = next;
 			m_destroyed--;
 			return Entity{index, version};
@@ -64,7 +74,7 @@ namespace glaze::ecs {
 				return false;
 			}
 
-			auto& [next, version] = m_slots[index];
+			auto& [next, version, location] = m_slots[index];
 			if (version != entity.version()) {
 				return false;
 			}
@@ -77,12 +87,30 @@ namespace glaze::ecs {
 			return true;
 		}
 
+		void set_location(const Entity entity, const EntityLocation location) noexcept {
+			const auto index = entity.index().get();
+			assert(index < m_slots.size());
+			m_slots[index].location = location;
+		}
+
+		[[nodiscard]] const EntityLocation* get_location(const Entity entity) noexcept {
+			const std::size_t i = entity.index().to_index();
+			if (i >= m_slots.size()) {
+				return nullptr;
+			}
+			const auto& [next, version, location] = m_slots[i];
+			if (version != entity.version()) {
+				return nullptr;
+			}
+			return &location;
+		}
+
 		[[nodiscard]] std::optional<Entity> entity(const EntityIndex index) const noexcept {
 			const auto i = index.to_index();
 			if (i >= m_slots.size()) {
 				return std::nullopt;
 			}
-			const auto& [next, version] = m_slots[i];
+			const auto& [next, version, location] = m_slots[i];
 			return Entity{index, version};
 		}
 
@@ -92,7 +120,7 @@ namespace glaze::ecs {
 				return false;
 			}
 
-			const auto [next, version] = m_slots[index];
+			const auto& [next, version, location] = m_slots[index];
 			if (version != entity.version()) {
 				return false;
 			}
@@ -111,13 +139,13 @@ namespace glaze::ecs {
 		void clear() noexcept {
 			m_slots.clear();
 			m_destroyed = 0;
-			m_head = EntityIndex::INVALID_VALUE;
+			m_head = utils::null_id;;
 		}
 
 	private:
 		std::vector<Slot> m_slots;
 		size_t m_destroyed = 0;
-		EntityIndex m_head = EntityIndex::INVALID_VALUE;
+		EntityIndex m_head = utils::null_id;;
 	};
 }
 

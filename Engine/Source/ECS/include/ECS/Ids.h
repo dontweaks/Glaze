@@ -24,6 +24,8 @@ namespace glaze::ecs {
 	using TableRow = utils::StrongId<struct TableRowIdTag, uint32_t>;
 	static constexpr TableId EMPTY_TABLE_ID{0};
 
+	using BundleId = utils::StrongId<struct BundleIdTag, uint32_t>;
+
 	struct ComponentIdHasher {
 		using is_transparent = void;
 

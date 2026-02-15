@@ -2,6 +2,7 @@
 
 #include <string_view>
 #include <format>
+#include <unordered_map>
 
 namespace glaze::utils {
 	namespace details {
@@ -100,7 +101,7 @@ namespace glaze::utils {
 		      m_name(TypeName<T>::value) {
 		}
 
-		constexpr TypeInfo() = default;
+		constexpr TypeInfo() noexcept = default;
 
 		template<typename T>
 		[[nodiscard]] static consteval TypeInfo of() noexcept {
@@ -115,7 +116,7 @@ namespace glaze::utils {
 			return m_name;
 		}
 
-		[[nodiscard]] constexpr auto operator<=>(const TypeInfo&) const = default;
+		[[nodiscard]] constexpr auto operator<=>(const TypeInfo&) const noexcept = default;
 
 	private:
 		uint64_t m_hash{};
@@ -123,7 +124,7 @@ namespace glaze::utils {
 	};
 
 	template<typename T>
-	[[nodiscard]] const TypeInfo& type_id() noexcept {
+	[[nodiscard]] constexpr TypeInfo type_id() noexcept {
 		static const TypeInfo instance{std::in_place_type<std::remove_cvref_t<T>>};
 		return instance;
 	}
@@ -132,6 +133,9 @@ namespace glaze::utils {
 	[[nodiscard]] const TypeInfo& type_id(T&&) noexcept {
 		return type_id<std::remove_cvref_t<T>>();
 	}
+
+	template<typename T>
+	using TypeInfoMap = std::unordered_map<TypeInfo, T>;
 }
 
 template<>
