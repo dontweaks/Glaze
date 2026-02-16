@@ -6,6 +6,7 @@
 #include "Utils/Panic.h"
 
 #include "ECS/Component/Component.h"
+#include "ECS/Storage/SparseSet.h"
 
 /*
 	Bundle is a set of components.
@@ -87,77 +88,58 @@ namespace glaze::ecs {
 		return count;
 	}
 
-	template<Bundle B>
-	[[nodiscard]] consteval auto bundle_components_storage_type() noexcept {
-		constexpr auto N = bundle_components_count<B>();
-		std::vector<StorageType> storages(N);
-		size_t i = 0;
-		visit_bundle_types<B>([&storages, &i]<Component C>() {
-			storages[i++] = get_storage_type<C>();
-		});
-		return std::span<const StorageType>(storages);
-	}
-
-	struct BundleComponents {
-		BundleComponents(const BundleId id, std::vector<ComponentId>&& components, std::vector<StorageType>&& storages) noexcept
-			: m_id(id), m_components(std::move(components)), m_storages(std::move(storages)) {
-		}
-
+	struct BundleMeta {
 		template<Bundle B>
-		[[nodiscard]] static BundleComponents create(const BundleId id, ComponentManager& component_manager) {
-			std::vector<ComponentId> component_ids;
-			component_ids.reserve(bundle_components_count<B>());
+		[[nodiscard]] static BundleMeta create(const BundleId id, ComponentManager& component_manager) {
+			SparseSet<ComponentId, StorageType> components;
+			components.reserve(bundle_components_count<B>());
 
-			std::vector<StorageType> storages;
-			storages.reserve(bundle_components_count<B>());
-
-			visit_bundle_types<B>([&component_manager, &component_ids, &storages]<Component C>() {
-				component_ids.push_back(component_manager.register_component<C>());
-				storages.push_back(get_storage_type<C>());
+			visit_bundle_types<B>([&component_manager, &components, id]<Component C>() {
+				const auto component_id = component_manager.register_component<C>();
+				if (components.contains(component_id)) {
+					utils::panic("Bundle {} has duplicate components {}", id.get(), component_manager.get_name(component_id).value_or("Error"));
+				}
+				components.insert(component_id, get_storage_type<C>());
 			});
 
-			const auto unique_res = std::ranges::unique(component_ids);
-			if (unique_res.begin() != unique_res.end()) {
-				utils::panic("Bundle {} has duplicate components {}", id.get(), unique_res | std::views::transform([&component_manager](const auto component_id) {
-					return component_manager.get_name(component_id);
-				}));
-			}
-
-			return BundleComponents{id, std::move(component_ids), std::move(storages)};
+			return BundleMeta{id, std::move(components)};
 		}
 
-		BundleComponents(const BundleComponents& other) = delete;
-		BundleComponents& operator=(const BundleComponents& other) = delete;
+		BundleMeta(const BundleMeta& other) = delete;
+		BundleMeta& operator=(const BundleMeta& other) = delete;
 
-		BundleComponents(BundleComponents&& other) noexcept = default;
-		BundleComponents& operator=(BundleComponents&& other) noexcept = default;
+		BundleMeta(BundleMeta&& other) noexcept = default;
+		BundleMeta& operator=(BundleMeta&& other) noexcept = default;
 
 		[[nodiscard]] BundleId id() const noexcept { return m_id; }
-		[[nodiscard]] std::span<const ComponentId> components() const noexcept { return m_components; }
-		[[nodiscard]] std::span<const StorageType> storages() const noexcept { return m_storages; }
+		[[nodiscard]] std::span<const ComponentId> components() const noexcept { return m_components.indices(); }
+		[[nodiscard]] std::span<const StorageType> storages() const noexcept { return m_components.values(); }
 
 		[[nodiscard]] auto table_components() const noexcept {
-			return std::views::zip(m_components, m_storages)
-				 | std::views::filter([](const auto& pair) { return std::get<1>(pair) == StorageType::Table; })
-				 | std::views::elements<0>;
+			return m_components.iter()
+				| std::views::filter([](const auto& p) { return std::get<1>(p) == StorageType::Table; })
+				| std::views::elements<0>;
 		}
 
 		[[nodiscard]] auto sparse_components() const noexcept {
-			return std::views::zip(m_components, m_storages)
-				 | std::views::filter([](const auto& pair) { return std::get<1>(pair) == StorageType::SparseSet; })
-				 | std::views::elements<0>;
+			return m_components.iter()
+				| std::views::filter([](const auto& p) { return std::get<1>(p) == StorageType::SparseSet; })
+				| std::views::elements<0>;
 		}
 
-		[[nodiscard]] size_t table_components_count() const noexcept { return std::ranges::count(m_storages, StorageType::Table); }
-		[[nodiscard]] size_t sparse_components_count() const noexcept { return std::ranges::count(m_storages, StorageType::SparseSet); }
+		[[nodiscard]] size_t table_components_count() const noexcept { return std::ranges::count(m_components.values(), StorageType::Table); }
+		[[nodiscard]] size_t sparse_components_count() const noexcept { return std::ranges::count(m_components.values(), StorageType::SparseSet); }
 
 		[[nodiscard]] size_t size() const noexcept { return m_components.size(); }
 		[[nodiscard]] bool empty() const noexcept { return m_components.empty(); }
 
 	private:
+		BundleMeta(const BundleId id, SparseSet<ComponentId, StorageType>&& components) noexcept
+			: m_id(id), m_components(std::move(components)) {
+		}
+
 		BundleId m_id;
-		std::vector<ComponentId> m_components;
-		std::vector<StorageType> m_storages;
+		SparseSet<ComponentId, StorageType> m_components;
 	};
 
 	struct BundleManager {
@@ -171,23 +153,23 @@ namespace glaze::ecs {
 
 		template<Bundle B>
 		BundleId register_bundle(ComponentManager& component_manager) {
-			constexpr auto type_id = utils::type_id<B>();
-			const auto it = m_bundle_map.find(utils::type_id<B>());
+			constexpr auto type_id = utils::type_id_ct<B>();
+			const auto it = m_bundle_map.find(type_id);
 			if (it != m_bundle_map.end()) {
 				return it->second;
 			}
 
 			const auto bundle_id = BundleId::from_index(m_bundles.size());
-			m_bundles.push_back(BundleComponents::create<B>(bundle_id, component_manager));
+			m_bundles.push_back(BundleMeta::create<B>(bundle_id, component_manager));
 			m_bundle_map.emplace(type_id, bundle_id);
 			return bundle_id;
 		}
 
-		[[nodiscard]] std::span<const BundleComponents> bundles() const noexcept { return m_bundles; }
+		[[nodiscard]] std::span<const BundleMeta> bundles() const noexcept { return m_bundles; }
 
 		template<Bundle B>
 		[[nodiscard]] BundleId bundle_id() const noexcept {
-			return get_id(utils::TypeInfo::of<std::remove_cvref_t<B>>());
+			return bundle_id(utils::TypeInfo::of<std::remove_cvref_t<B>>());
 		}
 
 		[[nodiscard]] BundleId bundle_id(const utils::TypeInfo& type_info) const noexcept {
@@ -223,7 +205,7 @@ namespace glaze::ecs {
 		[[nodiscard]] bool empty() const noexcept { return m_bundles.empty(); }
 
 	private:
-		std::vector<BundleComponents> m_bundles;
+		std::vector<BundleMeta> m_bundles;
 		utils::TypeInfoMap<BundleId> m_bundle_map;
 	};
 }
