@@ -41,4 +41,20 @@ namespace glaze::ecs {
 			return hash;
 		}
 	};
+
+	struct ComponentIdEqual {
+		using is_transparent = void;
+
+		[[nodiscard]] bool operator()(const std::vector<ComponentId>& a, const std::vector<ComponentId>& b) const noexcept {
+			return a == b;
+		}
+
+		[[nodiscard]] bool operator()(const std::span<const ComponentId> a, const std::vector<ComponentId>& b) const noexcept {
+			return std::ranges::equal(a, b);
+		}
+
+		[[nodiscard]] bool operator()(const std::span<const ComponentId> a, const std::span<const ComponentId> b) const noexcept {
+			return std::ranges::equal(a, b);
+		}
+	};
 }

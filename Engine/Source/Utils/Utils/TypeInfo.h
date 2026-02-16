@@ -124,13 +124,27 @@ namespace glaze::utils {
 	};
 
 	template<typename T>
-	[[nodiscard]] constexpr TypeInfo type_id() noexcept {
-		static const TypeInfo instance{std::in_place_type<std::remove_cvref_t<T>>};
-		return instance;
+	[[nodiscard]] constexpr TypeInfo type_id_ct() noexcept {
+		return TypeInfo::of<std::remove_cvref_t<T>>();
 	}
 
 	template<typename T>
-	[[nodiscard]] const TypeInfo& type_id(T&&) noexcept {
+	[[nodiscard]] constexpr TypeInfo type_id_ct(T&&) noexcept {
+		return type_id_ct<std::remove_cvref_t<T>>();
+	}
+
+	template<typename T>
+	[[nodiscard]] const TypeInfo& type_id() noexcept {
+		if constexpr(std::is_same_v<T, std::remove_cvref_t<T>>) {
+			static const TypeInfo instance{std::in_place_type<T>};
+			return instance;
+		} else {
+			return type_id<std::remove_cvref_t<T>>();
+		}
+	}
+
+	template<typename T>
+	[[nodiscard]] const TypeInfo& type_id(T &&) noexcept {
 		return type_id<std::remove_cvref_t<T>>();
 	}
 

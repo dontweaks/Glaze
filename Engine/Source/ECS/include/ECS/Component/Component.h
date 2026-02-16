@@ -9,6 +9,7 @@
 #include "Utils/Layout.h"
 #include "Utils/TypeOps.h"
 #include "Utils/TypeInfo.h"
+#include "Utils/HashCombine.h"
 
 namespace glaze::ecs {
 	enum struct StorageType : uint8_t {
@@ -26,8 +27,9 @@ namespace glaze::ecs {
 
 	template<Component T>
 	[[nodiscard]] consteval StorageType get_storage_type() noexcept {
-		if constexpr (HasStorageType<T>) {
-			return T::STORAGE_TYPE;
+		using U = std::remove_cvref_t<T>;
+		if constexpr (HasStorageType<U>) {
+			return U::STORAGE_TYPE;
 		} else {
 			return StorageType::Table;
 		}
@@ -60,7 +62,7 @@ namespace glaze::ecs {
 		[[nodiscard]] constexpr std::string_view name() const noexcept { return m_name; }
 
 	private:
-		friend struct ComponentInfo;
+		friend struct ComponentMeta;
 
 		std::string_view m_name;
 		StorageType m_storage_type = StorageType::Table;
@@ -69,16 +71,16 @@ namespace glaze::ecs {
 		utils::TypeInfo m_type_info{};
 	};
 
-	struct ComponentInfo {
-		ComponentInfo(const ComponentId id, const ComponentDesc& desc) noexcept
+	struct ComponentMeta {
+		ComponentMeta(const ComponentId id, const ComponentDesc& desc) noexcept
 			: m_id(id), m_desc(desc) {
 		}
 
-		ComponentInfo(const ComponentInfo& other) = delete;
-		ComponentInfo& operator=(const ComponentInfo& other) = delete;
+		ComponentMeta(const ComponentMeta& other) = delete;
+		ComponentMeta& operator=(const ComponentMeta& other) = delete;
 
-		ComponentInfo(ComponentInfo&& other) noexcept = default;
-		ComponentInfo& operator=(ComponentInfo&& other) noexcept = default;
+		ComponentMeta(ComponentMeta&& other) noexcept = default;
+		ComponentMeta& operator=(ComponentMeta&& other) noexcept = default;
 
 		[[nodiscard]] ComponentId id() const noexcept { return m_id; }
 		[[nodiscard]] std::string_view name() const noexcept { return m_desc.m_name; }
@@ -120,7 +122,7 @@ namespace glaze::ecs {
 
 		template<Component T>
 		[[nodiscard]] ComponentId component_id() const noexcept {
-			return get_id(utils::TypeInfo::of<std::remove_cvref_t<T>>());
+			return component_id(utils::TypeInfo::of<std::remove_cvref_t<T>>());
 		}
 
 		[[nodiscard]] ComponentId component_id(const utils::TypeInfo& type_info) const noexcept {
@@ -131,7 +133,7 @@ namespace glaze::ecs {
 			return it->second;
 		}
 
-		[[nodiscard]] const ComponentInfo* get_info(const ComponentId id) const noexcept {
+		[[nodiscard]] const ComponentMeta* get_info(const ComponentId id) const noexcept {
 			const auto index = id.to_index();
 			if (index >= m_components.size()) {
 				return nullptr;
@@ -164,7 +166,75 @@ namespace glaze::ecs {
 		[[nodiscard]] bool empty() const noexcept { return m_components.empty(); }
 
 	private:
-		std::vector<ComponentInfo> m_components;
+		std::vector<ComponentMeta> m_components;
 		utils::TypeInfoMap<ComponentId> m_components_map;
+	};
+	
+	struct ComponentSignatureView {
+		std::span<const ComponentId> table;
+		std::span<const ComponentId> sparse;
+	};
+	
+	struct ComponentSignature {
+		ComponentSignature() = default;
+		ComponentSignature(
+			const std::span<const ComponentId> table, 
+			const std::span<const ComponentId> sparse) noexcept
+			: table(table.begin(), table.end()), sparse(sparse.begin(), sparse.end()) {
+		}
+
+		explicit ComponentSignature(const ComponentSignatureView view) noexcept
+			: ComponentSignature(view.table, view.sparse) {
+		}
+
+		[[nodiscard]] size_t component_count() const noexcept {
+			return table.size() + sparse.size();
+		}
+
+		std::vector<ComponentId> table;
+		std::vector<ComponentId> sparse;
+	};
+	
+	struct ComponentSignatureHasher {
+		using is_transparent = void;
+
+		[[nodiscard]] size_t operator()(const ComponentSignature& k) const noexcept {
+			return hash_view({k.table, k.sparse});
+		}
+
+		[[nodiscard]] size_t operator()(const ComponentSignatureView v) const noexcept {
+			return hash_view(v);
+		}
+
+	private:
+		[[nodiscard]] static size_t hash_view(const ComponentSignatureView v) noexcept {
+			size_t h = 0;
+			utils::hash_combine_with<ComponentIdHasher>(h, v.table, v.sparse);
+			return h;
+		}
+	};
+
+	struct ComponentSignatureEq {
+		using is_transparent = void;
+
+		[[nodiscard]] bool operator()(const ComponentSignature& a, const ComponentSignature& b) const noexcept {
+			return equal({a.table, a.sparse}, {b.table, b.sparse});
+		}
+
+		[[nodiscard]] bool operator()(const ComponentSignature& a, const ComponentSignatureView b) const noexcept {
+			return equal({a.table, a.sparse}, b);
+		}
+
+		[[nodiscard]] bool operator()(const ComponentSignatureView a, const ComponentSignature& b) const noexcept {
+			return equal(a, {b.table, b.sparse});
+		}
+
+	private:
+		[[nodiscard]] static bool equal(const ComponentSignatureView a, const ComponentSignatureView b) noexcept {
+			return a.table.size() == b.table.size()
+				&& a.sparse.size() == b.sparse.size()
+				&& std::ranges::equal(a.table, b.table)
+				&& std::ranges::equal(a.sparse, b.sparse);
+		}
 	};
 }
