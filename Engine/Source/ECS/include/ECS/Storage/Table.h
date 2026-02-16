@@ -59,7 +59,7 @@ namespace glaze::ecs {
 
 		[[nodiscard]] auto& at(this auto& self, const TableId id) noexcept {
 			const auto index = id.to_index();
-			if (index >= self.m_bundles.size()) {
+			if (index >= self.m_tables.size()) {
 				utils::panic("Archetype id {} hasn't been registered yet", id.get());
 			}
 
