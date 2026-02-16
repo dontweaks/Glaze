@@ -2,21 +2,39 @@
 
 #include "Bundle/Bundle.h"
 #include "Component/Component.h"
+#include "Archetype/Archetype.h"
+#include "Storage/Table.h"
 
 #include "Entity.h"
 
 namespace glaze::ecs {
 	struct World {
 		Entity create_entity() {
+			auto& archetype = m_archetype_manager.empty_archetype();
 			const auto entity = m_entity_manager.create_entity();
-			//TODO handle archetypes
+			const auto table_row = m_table_manager.add_entity(archetype.table_id(), entity);
+			const auto location = archetype.add_entity(entity, table_row);
+			m_entity_manager.set_location(entity, location);
 			return entity;
 		}
 
 		template<Bundle B>
 		Entity create_entity(B&& bundle) {
 			const auto entity = m_entity_manager.create_entity();
-			//TODO handle archetypes
+
+			const auto bundle_id = register_bundle<B>();
+			const auto& bundle_components = m_bundle_manager[bundle_id];
+			const auto [archetype_id, created] = m_archetype_manager.add_bundle_to_archetype(EMPTY_ARCHETYPE_ID, bundle_components, m_table_manager);
+
+			auto& archetype = m_archetype_manager[archetype_id];
+			auto& table = m_table_manager[archetype.table_id()];
+
+			const auto table_row = table.add_entity(entity);
+			const auto location = archetype.add_entity(entity, table_row);
+			m_entity_manager.set_location(entity, location);
+
+			//TODO: write bundle data to the storage, don't worry about this for now
+
 			return entity;
 		}
 
@@ -47,26 +65,35 @@ namespace glaze::ecs {
 		}
 
 		template<Bundle B>
-		void register_bundle() {
-			visit_bundle_types<B>([this]<Component C>() {
-				m_component_manager.register_component<C>();
-			});
+		BundleId register_bundle() {
+			return m_bundle_manager.register_bundle<B>(m_component_manager);
 		}
 
-		template<Component ... Cs> requires (sizeof ... (Cs) > 0)
-		void register_components() {
-			register_bundle<ComponentBundle<Cs...>>();
+		template<Component C>
+		ComponentId register_component() {
+			return m_component_manager.register_component<C>();
+		}
+
+		template<Component ... Cs> requires (sizeof ... (Cs) > 1)
+		std::array<ComponentId, sizeof ... (Cs)> register_components() {
+			return { register_component<Cs>()... };
 		}
 
 		[[nodiscard]] WorldId world_id() const noexcept { return m_id; }
 
 		[[nodiscard]] auto& entity_manager(this auto& self) noexcept { return self.m_entity_manager; }
 		[[nodiscard]] auto& component_manager(this auto& self) noexcept { return self.m_component_manager; }
+		[[nodiscard]] auto& archetype_manager(this auto& self) noexcept { return self.m_archetype_manager; }
+		[[nodiscard]] auto& bundle_manager(this auto& self) noexcept { return self.m_bundle_manager; }
+		[[nodiscard]] auto& table_manager(this auto& self) noexcept { return self.m_table_manager; }
 
 	private:
 		WorldId m_id{0};
 
 		EntityManager m_entity_manager;
 		ComponentManager m_component_manager;
+		ArchetypeManager m_archetype_manager;
+		BundleManager m_bundle_manager;
+		TableManager m_table_manager;
 	};
 }
