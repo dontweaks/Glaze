@@ -39,6 +39,20 @@ namespace glaze::ecs {
 	template<Bundle B>
 	using BundleComponentTypes = std::remove_cvref_t<decltype(std::declval<B>().components())>;
 
+	template<typename Tuple>
+	struct NormalizeBundleTuple;
+
+	template<Component... Cs>
+	struct NormalizeBundleTuple<std::tuple<Cs...>> {
+		using type = std::tuple<std::remove_cvref_t<Cs>...>;
+	};
+
+	template<typename Tuple>
+	using NormalizeBundleTupleT = NormalizeBundleTuple<std::remove_cvref_t<Tuple>>::type;
+
+	template<Bundle B>
+	using BundleKeyType = NormalizeBundleTupleT<BundleComponentTypes<B>>;
+
 	template<Component... Cs>
 	struct ComponentBundle {
 		std::tuple<Cs...> m_components;
@@ -153,14 +167,15 @@ namespace glaze::ecs {
 
 		template<Bundle B>
 		BundleId register_bundle(ComponentManager& component_manager) {
-			constexpr auto type_id = utils::type_id_ct<B>();
+			using U = std::remove_cvref_t<B>;
+			constexpr auto type_id = utils::type_id_ct<BundleKeyType<U>>();
 			const auto it = m_bundle_map.find(type_id);
 			if (it != m_bundle_map.end()) {
 				return it->second;
 			}
 
 			const auto bundle_id = BundleId::from_index(m_bundles.size());
-			m_bundles.push_back(BundleMeta::create<B>(bundle_id, component_manager));
+			m_bundles.push_back(BundleMeta::create<U>(bundle_id, component_manager));
 			m_bundle_map.emplace(type_id, bundle_id);
 			return bundle_id;
 		}
@@ -169,7 +184,8 @@ namespace glaze::ecs {
 
 		template<Bundle B>
 		[[nodiscard]] BundleId bundle_id() const noexcept {
-			return bundle_id(utils::TypeInfo::of<std::remove_cvref_t<B>>());
+			using U = std::remove_cvref_t<B>;
+			return bundle_id(utils::TypeInfo::of<BundleKeyType<U>>());
 		}
 
 		[[nodiscard]] BundleId bundle_id(const utils::TypeInfo& type_info) const noexcept {
