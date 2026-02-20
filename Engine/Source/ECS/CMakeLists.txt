@@ -7,7 +7,11 @@ target_compile_features(ECS PRIVATE cxx_std_23)
 
 add_subdirectory(include/ECS/Component)
 add_subdirectory(include/ECS/Bundle)
+add_subdirectory(include/ECS/Storage)
 add_subdirectory(include/ECS)
+#if(BUILD_TESTING)
+    add_subdirectory(tests)
+#endif()
 
 target_sources(ECS
         PRIVATE
