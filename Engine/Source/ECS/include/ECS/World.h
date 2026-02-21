@@ -33,14 +33,18 @@ namespace glaze::ecs {
 			const auto location = archetype.add_entity(entity, table_row);
 			m_entity_manager.set_location(entity, location);
 
-			//TODO: write bundle data to the storage, don't worry about this for now
+			//TODO: write bundle data to the storage
+			visit_bundle(std::forward<B>(bundle), [&]<typename C>(C&& c) {
+				using T = std::remove_cvref_t<C>;
+
+			});
 
 			return entity;
 		}
 
 		template<Component ... Cs> requires (sizeof ... (Cs) > 0)
 		Entity create_entity(Cs&& ... cs) {
-			return create_entity(ComponentBundle{ std::forward_as_tuple(std::forward<Cs>(cs)...) });
+			return create_entity(ComponentBundle{ std::forward<Cs>(cs)... });
 		}
 
 		bool destroy_entity(const Entity entity) noexcept {
@@ -53,7 +57,7 @@ namespace glaze::ecs {
 
 		template<Component ... Cs> requires (sizeof ... (Cs) > 0)
 		void add_components(const Entity entity, Cs&& ... cs) {
-			return add_bundle(entity, ComponentBundle{ std::forward_as_tuple(std::forward<Cs>(cs)...) });
+			return add_bundle(entity, ComponentBundle{ std::forward<Cs>(cs)... });
 		}
 
 		template<Bundle B>

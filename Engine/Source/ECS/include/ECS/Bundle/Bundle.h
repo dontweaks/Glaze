@@ -55,17 +55,26 @@ namespace glaze::ecs {
 
 	template<Component... Cs>
 	struct ComponentBundle {
+		static_assert((std::is_reference_v<Cs> && ...));
+
 		std::tuple<Cs...> m_components;
+
+		constexpr explicit ComponentBundle(Cs... cs) noexcept
+			: m_components(std::forward<Cs>(cs)...) {}
 
 		constexpr auto components() && noexcept { return std::move(m_components); }
 		constexpr auto components() & = delete;
 	};
 
-	template<Bundle B>
+	template<Component... Cs>
+	ComponentBundle(Cs&&...) -> ComponentBundle<Cs&&...>;
+
+	template<Bundle B> requires (!std::is_lvalue_reference_v<B>)
 	constexpr void visit_bundle(B&& bundle, auto&& func) {
-		std::apply([&]<Component... Cs>(Cs&& ... components) {
-			(func(std::forward<Cs>(components)), ...);
-		}, std::forward<B>(bundle).components());
+		std::apply([&]<Component... Cs>(Cs&&... components) {
+				(func(std::forward_like<B>(components)), ...);
+			}, std::forward<B>(bundle).components()
+		);
 	}
 
 	template<Bundle B>

@@ -133,7 +133,7 @@ namespace glaze::ecs {
 			return it->second;
 		}
 
-		[[nodiscard]] const ComponentMeta* get_info(const ComponentId id) const noexcept {
+		[[nodiscard]] const ComponentMeta* get_meta(const ComponentId id) const noexcept {
 			const auto index = id.to_index();
 			if (index >= m_components.size()) {
 				return nullptr;
