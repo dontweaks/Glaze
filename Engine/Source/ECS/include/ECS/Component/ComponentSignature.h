@@ -10,6 +10,10 @@ namespace glaze::ecs {
 	struct ComponentSignatureView {
 		std::span<const ComponentId> table;
 		std::span<const ComponentId> sparse;
+
+		[[nodiscard]] size_t component_count() const noexcept {
+			return table.size() + sparse.size();
+		}
 	};
 
 	struct ComponentSignature {

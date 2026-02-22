@@ -5,6 +5,7 @@ add_library(Glaze::ECS ALIAS ECS)
 
 target_compile_features(ECS PRIVATE cxx_std_23)
 
+add_subdirectory(include/ECS/Archetype)
 add_subdirectory(include/ECS/Component)
 add_subdirectory(include/ECS/Bundle)
 add_subdirectory(include/ECS/Storage)
