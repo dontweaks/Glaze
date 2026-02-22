@@ -4,4 +4,6 @@ target_sources(ECS
         BASE_DIRS ${PROJECT_SOURCE_DIR}/include
         FILES
         Bundle.h
+        BundleManager.h
+        BundleMeta.h
 )

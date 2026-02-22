@@ -1,12 +1,6 @@
 #pragma once
 
-#include <tuple>
-#include <ranges>
-
-#include "Utils/Panic.h"
-
 #include "ECS/Component/Component.h"
-#include "ECS/Storage/SparseSet.h"
 
 /*
 	Bundle is a set of components.
@@ -27,7 +21,6 @@
 
 	Same thing applies to removing components
  */
-
 namespace glaze::ecs {
 	template<typename T>
 	concept Bundle = requires(T t) {
@@ -110,127 +103,4 @@ namespace glaze::ecs {
 		});
 		return count;
 	}
-
-	struct BundleMeta {
-		template<Bundle B>
-		[[nodiscard]] static BundleMeta create(const BundleId id, ComponentManager& component_manager) {
-			SparseSet<ComponentId, StorageType> components;
-			components.reserve(bundle_components_count<B>());
-
-			visit_bundle_types<B>([&component_manager, &components, id]<Component C>() {
-				const auto component_id = component_manager.register_component<C>();
-				if (components.contains(component_id)) {
-					utils::panic("Bundle {} has duplicate components {}", id.get(), component_manager.get_name(component_id).value_or("Error"));
-				}
-				components.insert(component_id, get_storage_type<C>());
-			});
-
-			return BundleMeta{id, std::move(components)};
-		}
-
-		BundleMeta(const BundleMeta& other) = delete;
-		BundleMeta& operator=(const BundleMeta& other) = delete;
-
-		BundleMeta(BundleMeta&& other) noexcept = default;
-		BundleMeta& operator=(BundleMeta&& other) noexcept = default;
-
-		[[nodiscard]] BundleId id() const noexcept { return m_id; }
-		[[nodiscard]] std::span<const ComponentId> components() const noexcept { return m_components.indices(); }
-		[[nodiscard]] std::span<const StorageType> storages() const noexcept { return m_components.values(); }
-
-		[[nodiscard]] auto table_components() const noexcept {
-			return m_components.iter()
-				| std::views::filter([](const auto& p) { return std::get<1>(p) == StorageType::Table; })
-				| std::views::elements<0>;
-		}
-
-		[[nodiscard]] auto sparse_components() const noexcept {
-			return m_components.iter()
-				| std::views::filter([](const auto& p) { return std::get<1>(p) == StorageType::SparseSet; })
-				| std::views::elements<0>;
-		}
-
-		[[nodiscard]] size_t table_components_count() const noexcept { return std::ranges::count(m_components.values(), StorageType::Table); }
-		[[nodiscard]] size_t sparse_components_count() const noexcept { return std::ranges::count(m_components.values(), StorageType::SparseSet); }
-
-		[[nodiscard]] size_t size() const noexcept { return m_components.size(); }
-		[[nodiscard]] bool empty() const noexcept { return m_components.empty(); }
-
-	private:
-		BundleMeta(const BundleId id, SparseSet<ComponentId, StorageType>&& components) noexcept
-			: m_id(id), m_components(std::move(components)) {
-		}
-
-		BundleId m_id;
-		SparseSet<ComponentId, StorageType> m_components;
-	};
-
-	struct BundleManager {
-		BundleManager() noexcept = default;
-
-		BundleManager(const BundleManager& other) = delete;
-		BundleManager& operator=(const BundleManager& other) = delete;
-
-		BundleManager(BundleManager&& other) = delete;
-		BundleManager& operator=(BundleManager&& other) = delete;
-
-		template<Bundle B>
-		BundleId register_bundle(ComponentManager& component_manager) {
-			using U = std::remove_cvref_t<B>;
-			constexpr auto type_id = utils::type_id_ct<BundleKeyType<U>>();
-			const auto it = m_bundle_map.find(type_id);
-			if (it != m_bundle_map.end()) {
-				return it->second;
-			}
-
-			const auto bundle_id = BundleId::from_index(m_bundles.size());
-			m_bundles.push_back(BundleMeta::create<U>(bundle_id, component_manager));
-			m_bundle_map.emplace(type_id, bundle_id);
-			return bundle_id;
-		}
-
-		[[nodiscard]] std::span<const BundleMeta> bundles() const noexcept { return m_bundles; }
-
-		template<Bundle B>
-		[[nodiscard]] BundleId bundle_id() const noexcept {
-			using U = std::remove_cvref_t<B>;
-			return bundle_id(utils::TypeInfo::of<BundleKeyType<U>>());
-		}
-
-		[[nodiscard]] BundleId bundle_id(const utils::TypeInfo& type_info) const noexcept {
-			const auto it = m_bundle_map.find(type_info);
-			if (it == m_bundle_map.end()) {
-				return utils::null_id;
-			}
-			return it->second;
-		}
-
-		[[nodiscard]] std::span<const StorageType> storage_types(const BundleId id) const noexcept {
-			const auto index = id.to_index();
-			if (index >= m_bundles.size()) {
-				utils::panic("Bundle id {} is out of range", id.get());
-			}
-			return m_bundles[index].storages();
-		}
-
-		[[nodiscard]] auto& operator[](this auto& self, const BundleId id) noexcept {
-			return self.m_bundles[id.to_index()];
-		}
-
-		[[nodiscard]] auto& at(this auto& self, const BundleId id) noexcept {
-			const auto index = id.to_index();
-			if (index >= self.m_bundles.size()) {
-				utils::panic("Bundle id {} is out of range", id.get());
-			}
-
-			return self.m_bundles.at(index);
-		}
-
-		[[nodiscard]] size_t size() const noexcept { return m_bundles.size(); }
-		[[nodiscard]] bool empty() const noexcept { return m_bundles.empty(); }
-
-	private:
-		std::vector<BundleMeta> m_bundles;
-		utils::TypeInfoMap<BundleId> m_bundle_map;
-	};
 }
