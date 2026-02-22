@@ -4,4 +4,7 @@ target_sources(ECS
         BASE_DIRS ${PROJECT_SOURCE_DIR}/include
         FILES
         Component.h
+        ComponentManager.h
+        ComponentMeta.h
+        ComponentSignature.h
 )
