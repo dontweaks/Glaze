@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
 
-#include "ECS/Component/Component.h"
+#include "ECS/Component/ComponentManager.h"
 
 namespace glaze::ecs::tests {
 	struct TestPosition {

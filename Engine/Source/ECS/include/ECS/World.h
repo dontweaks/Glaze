@@ -1,19 +1,23 @@
 #pragma once
 
-#include "Bundle/Bundle.h"
-#include "Component/Component.h"
-#include "Archetype/Archetype.h"
-#include "Storage/Table.h"
+#include "Bundle/BundleManager.h"
+#include "Component/ComponentManager.h"
+#include "Archetype/ArchetypeManager.h"
+#include "Table/TableManager.h"
 
 #include "Entity.h"
 
 namespace glaze::ecs {
 	struct World {
 		Entity create_entity() {
-			auto& archetype = m_archetype_manager.empty_archetype();
 			const auto entity = m_entity_manager.create_entity();
-			const auto table_row = m_table_manager.add_entity(archetype.table_id(), entity);
+
+			auto& table = m_table_manager.empty_table();
+			const auto table_row = table.add_entity(entity);
+
+			auto& archetype = m_archetype_manager.empty_archetype();
 			const auto location = archetype.add_entity(entity, table_row);
+
 			m_entity_manager.set_location(entity, location);
 			return entity;
 		}
@@ -23,20 +27,24 @@ namespace glaze::ecs {
 			const auto entity = m_entity_manager.create_entity();
 
 			const auto bundle_id = register_bundle<B>();
-			const auto& bundle_components = m_bundle_manager[bundle_id];
-			const auto [archetype_id, created] = m_archetype_manager.add_bundle_to_archetype(EMPTY_ARCHETYPE_ID, bundle_components, m_table_manager);
+			const auto [archetype_id, table_id] = m_archetype_manager.add_bundle_to_archetype(
+				EMPTY_ARCHETYPE_ID,
+				bundle_id,
+				m_bundle_manager,
+				m_component_manager,
+				m_table_manager);
 
 			auto& archetype = m_archetype_manager[archetype_id];
-			auto& table = m_table_manager[archetype.table_id()];
+			auto& table = m_table_manager[table_id];
 
 			const auto table_row = table.add_entity(entity);
 			const auto location = archetype.add_entity(entity, table_row);
+
 			m_entity_manager.set_location(entity, location);
 
-			//TODO: write bundle data to the storage
 			visit_bundle(std::forward<B>(bundle), [&]<typename C>(C&& c) {
 				using T = std::remove_cvref_t<C>;
-
+				//storage.write(c);
 			});
 
 			return entity;

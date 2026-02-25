@@ -7,8 +7,6 @@
 #include "ECS/Component/Component.h"
 #include "ECS/Component/ComponentSignature.h"
 
-#include "ECS/Ids.h"
-
 namespace glaze::ecs {
 	struct ArchetypeEntity {
 		Entity entity;

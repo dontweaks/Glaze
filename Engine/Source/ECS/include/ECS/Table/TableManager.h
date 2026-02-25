@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Utils/Panic.h"
-#include "ECS/Component/ComponentSignature.h"
+#include "ECS/Component/ComponentManager.h"
 
 #include "Table.h"
 
@@ -12,21 +12,29 @@ namespace glaze::ecs {
 			m_tables.emplace_back(EMPTY_TABLE_ID);
 		}
 
-		std::pair<TableId, bool> try_emplace(const std::span<const ComponentId> table_components) {
+		[[nodiscard]] TableId try_emplace(
+			const std::span<const ComponentId> table_components,
+			const ComponentManager& component_manager
+		) {
 			if (table_components.empty()) {
-				return { EMPTY_TABLE_ID, false };
+				return EMPTY_TABLE_ID;
 			}
 
 			const ComponentSignatureView table_key{table_components, {}};
 			const auto it = m_by_components.find(table_key);
 			if (it != m_by_components.end()) {
-				return { it->second, false };
+				return it->second;
 			}
 
 			const auto table_id = TableId::from_index(m_tables.size());
 			m_by_components.emplace(table_key, table_id);
-			m_tables.emplace_back(table_id);
-			return { table_id, true };
+			auto& table = m_tables.emplace_back(table_id);
+
+			for (const auto component_id : table_components) {
+				table.add_column(component_manager[component_id]);
+			}
+
+			return table_id;
 		}
 
 		[[nodiscard]] TableRow add_entity(const TableId table_id, const Entity entity) {
