@@ -3,6 +3,7 @@ add_executable(ECS.Tests
         test_ComponentManager.cpp
         test_SparseArray.cpp
         test_SparseSet.cpp
+        test_TypeErasedArray.cpp
 )
 
 target_compile_features(ECS.Tests PRIVATE cxx_std_23)

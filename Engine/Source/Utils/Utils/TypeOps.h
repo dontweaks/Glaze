@@ -12,6 +12,9 @@ namespace glaze::utils {
 		using MoveCtorFn    = void(*)(void* dst, void* src) noexcept;
 		using MoveAssignFn  = void(*)(void* dst, void* src) noexcept;
 
+		using CopyCtorFn    = void(*)(void* dst, const void* src);
+		using CopyAssignFn  = void(*)(void* dst, const void* src);
+
 		template<typename T>
 		[[nodiscard]] static consteval TypeOps of() {
 			using U = std::remove_cvref_t<T>;
@@ -45,6 +48,20 @@ namespace glaze::utils {
 				}
 			};
 
+			if constexpr (std::is_copy_constructible_v<U>) {
+				ops.copy_construct = [](void* const dst, const void* const src) noexcept(std::is_nothrow_copy_constructible_v<U>) {
+					std::construct_at(static_cast<U*>(dst), *static_cast<const U*>(src));
+				};
+			}
+
+			if constexpr (std::is_copy_assignable_v<U>) {
+				ops.copy_assign = [](void* const dst, const void* const src) noexcept(std::is_nothrow_copy_assignable_v<U>) {
+					if (dst != src) {
+						*static_cast<U*>(dst) = *static_cast<const U*>(src);
+					}
+				};
+			}
+
 			return ops;
 		}
 
@@ -53,5 +70,8 @@ namespace glaze::utils {
 
 		MoveCtorFn    move_construct = nullptr;
 		MoveAssignFn  move_assign    = nullptr;
+
+		CopyCtorFn    copy_construct = nullptr;
+		CopyAssignFn  copy_assign    = nullptr;
 	};
 }

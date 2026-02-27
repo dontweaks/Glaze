@@ -10,7 +10,7 @@ namespace glaze::ecs {
 
 		TypeErasedArray() = default;
 
-		TypeErasedArray(const Layout& layout, const TypeOps& type_ops, const size_t capacity) noexcept
+		TypeErasedArray(const Layout& layout, const TypeOps& type_ops, const size_t capacity = 0) noexcept
 			: m_layout(layout), m_type_ops(type_ops) {
 			reserve(capacity);
 		}
@@ -45,34 +45,31 @@ namespace glaze::ecs {
 		T& emplace_back(Args&&... args) noexcept(std::is_nothrow_constructible_v<std::remove_cvref_t<T>, Args...>) {
 			assert(m_layout == Layout::of<T>());
 
-			if (zst()) {
-				ensure_capacity_for(1);
-				++m_size;
-				return *get<T>(m_size - 1);
+			auto construct = [&](void* const p) { std::construct_at(static_cast<T*>(p), std::forward<Args>(args)...); };
+
+			if (void* const slot = emplace_back_untyped(construct)) {
+				return *std::launder(static_cast<T*>(slot));
 			}
 
-			ensure_capacity_for(1);
-			auto* p = std::construct_at(static_cast<T*>(get(m_size)), std::forward<Args>(args)...);
-			++m_size;
-			return *std::launder(p);
+			return *get<T>(m_size - 1);
 		}
 
 		template<typename T>
-		T& push_back(T&& v) noexcept {
-			using U = std::remove_cvref_t<T>;
-			assert(m_layout == Layout::of<U>());
+		void push_back(const T& v) noexcept(std::is_nothrow_copy_constructible_v<std::remove_cvref_t<T>>) {
+			assert(m_layout == Layout::of<T>());
 
-			if (zst()) {
-				ensure_capacity_for(1);
-				++m_size;
-				return *get<U>(m_size - 1);
-			}
+			emplace_back_untyped([&](void* const p) noexcept {
+				m_type_ops.copy_construct(p, std::addressof(v));
+			});
+		}
 
-			ensure_capacity_for(1);
+		template<typename T> requires (!std::is_lvalue_reference_v<T>)
+		void push_back(T&& v) noexcept {
+			assert(m_layout == Layout::of<T>());
 
-			m_type_ops.move_construct(get(m_size), std::addressof(v));
-			++m_size;
-			return *get<U>(m_size - 1);
+			emplace_back_untyped([&](void* const p) noexcept {
+				m_type_ops.move_construct(p, std::addressof(v));
+			});
 		}
 
 		template<typename T>
@@ -138,9 +135,10 @@ namespace glaze::ecs {
 			}
 
 			ensure_capacity_for(1);
-			std::forward<Init>(init)(get(m_size));
+			void* const slot = get(m_size);
+			std::forward<Init>(init)(slot);
 			++m_size;
-			return get(m_size - 1);
+			return slot;
 		}
 
 		[[nodiscard]] void* get(const size_t index) noexcept {
@@ -260,6 +258,7 @@ namespace glaze::ecs {
 			--m_size;
 		}
 
+		//TODO: zst are broken
 		[[nodiscard]] bool zst() const noexcept { return m_layout.size() == 0; }
 		[[nodiscard]] size_t size() const noexcept { return m_size; }
 		[[nodiscard]] size_t capacity() const noexcept { return m_capacity; }

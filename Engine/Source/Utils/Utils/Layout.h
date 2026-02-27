@@ -6,7 +6,13 @@
 namespace glaze::utils {
 	struct Layout {
 		template<typename T>
-		[[nodiscard]] static consteval Layout of() noexcept { return Layout { sizeof(T), alignof(T) }; }
+		[[nodiscard]] static consteval Layout of() noexcept {
+			using U = std::remove_cvref_t<T>;
+			return Layout {
+				sizeof(U),
+				alignof(U)
+			};
+		}
 
 		constexpr Layout() noexcept = default;
 		constexpr Layout(const size_t size, const size_t alignment) noexcept
