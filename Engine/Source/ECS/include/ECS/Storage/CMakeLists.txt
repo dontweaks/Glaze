@@ -6,5 +6,4 @@ target_sources(ECS
         SparseArray.h
         SparseIndex.h
         SparseSet.h
-        Table.h
 )
