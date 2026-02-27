@@ -8,10 +8,17 @@ namespace glaze::utils {
 		template<typename T>
 		[[nodiscard]] static consteval Layout of() noexcept {
 			using U = std::remove_cvref_t<T>;
-			return Layout {
-				sizeof(U),
-				alignof(U)
-			};
+			if constexpr (std::is_empty_v<U>) {
+				return Layout {
+					0,
+					alignof(U)
+				};
+			} else {
+				return Layout {
+					sizeof(U),
+					alignof(U)
+				};
+			}
 		}
 
 		constexpr Layout() noexcept = default;
