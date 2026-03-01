@@ -1,5 +1,7 @@
 #pragma once
 
+#include <print>
+
 #include "Bundle/BundleManager.h"
 #include "Component/ComponentManager.h"
 #include "Archetype/ArchetypeManager.h"
@@ -57,7 +59,36 @@ namespace glaze::ecs {
 		}
 
 		bool destroy_entity(const Entity entity) noexcept {
-			//TODO handle archetypes
+			const auto location = m_entity_manager.get_location(entity);
+			if (!location) {
+				std::println("Entity {} does not exist", entity);
+				return false;
+			}
+
+			m_entity_manager.set_location(entity, NULL_ENTITY_LOCATION);
+
+			auto& archetype = m_archetype_manager[location->archetype_id];
+			const auto [moved_entity_in_archetype, table_row] = archetype.remove_entity(location->archetype_row);
+
+			if (moved_entity_in_archetype) {
+				m_entity_manager.update_archetype_location(*moved_entity_in_archetype, location->archetype_row);
+			}
+
+			for (const auto component_id : archetype.sparse_components()) {
+				auto& sparse_set = m_storage[component_id];
+				sparse_set.remove_and_destroy_untyped(entity);
+			}
+
+			auto& table = m_storage[archetype.table_id()];
+			if (const auto moved_entity_in_table = table.remove_entity(table_row)) {
+				const auto moved_location = *m_entity_manager.get_location(*moved_entity_in_table);
+
+				m_entity_manager.update_table_location(*moved_entity_in_table, table_row);
+
+				auto& moved_entity_archetype = m_archetype_manager[moved_location.archetype_id];
+				moved_entity_archetype.set_entity_table_row(moved_location.archetype_row, table_row);
+			}
+
 			return m_entity_manager.destroy_entity(entity);
 		}
 

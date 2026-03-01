@@ -25,6 +25,21 @@ namespace glaze::ecs {
 			return TableRow::from_index(m_entities.size() - 1);
 		}
 
+		[[nodiscard]] std::optional<Entity> remove_entity(const TableRow row) noexcept {
+			for (auto& column : m_columns.values()) {
+				column.swap_remove(row.to_index());
+			}
+
+			const bool is_last = row.to_index() == m_entities.size() - 1;
+			utils::swap_remove(m_entities, row.to_index());
+
+			if (is_last) {
+				return std::nullopt;
+			}
+
+			return m_entities[row.to_index()];
+		}
+
 		[[nodiscard]] TableId id() const noexcept { return m_id; }
 
 		[[nodiscard]] auto& operator[](this auto& self, const ComponentId id) noexcept {
@@ -38,6 +53,9 @@ namespace glaze::ecs {
 		[[nodiscard]] auto at(const ComponentId id) const noexcept {
 			return m_columns.at(id);
 		}
+
+		[[nodiscard]] size_t entity_count() const noexcept { return m_entities.size(); }
+		[[nodiscard]] size_t component_count() const noexcept { return m_columns.size(); }
 
 	private:
 		std::vector<Entity> m_entities;

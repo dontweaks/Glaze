@@ -16,6 +16,13 @@ namespace glaze::ecs {
 		TableRow table_row;
 	};
 
+	static constexpr EntityLocation NULL_ENTITY_LOCATION {
+		.archetype_id = utils::null_id,
+		.archetype_row = utils::null_id,
+		.table_id = utils::null_id,
+		.table_row = utils::null_id
+	};
+
 	struct Entity {
 		Entity() = default;
 		constexpr explicit Entity(const EntityIndex index, const EntityVersion version = FIRST_ENTITY_VERSION) noexcept
@@ -44,9 +51,9 @@ namespace glaze::ecs {
 
 	struct EntityManager {
 		struct Slot {
-			EntityIndex next = utils::null_id;;
+			EntityIndex next = utils::null_id;
 			EntityVersion version = FIRST_ENTITY_VERSION;
-			EntityLocation location;
+			EntityLocation location = NULL_ENTITY_LOCATION;
 		};
 
 		EntityManager() = default;
@@ -95,16 +102,28 @@ namespace glaze::ecs {
 			m_slots[index].location = location;
 		}
 
-		[[nodiscard]] const EntityLocation* get_location(const Entity entity) noexcept {
+		void update_archetype_location(const Entity entity, const ArchetypeRow archetype_row) noexcept {
+			const auto index = entity.index().get();
+			assert(index < m_slots.size());
+			m_slots[index].location.archetype_row = archetype_row;
+		}
+
+		void update_table_location(const Entity entity, const TableRow table_row) noexcept {
+			const auto index = entity.index().get();
+			assert(index < m_slots.size());
+			m_slots[index].location.table_row = table_row;
+		}
+
+		[[nodiscard]] std::optional<EntityLocation> get_location(const Entity entity) const noexcept {
 			const std::size_t i = entity.index().to_index();
 			if (i >= m_slots.size()) {
-				return nullptr;
+				return std::nullopt;
 			}
 			const auto& [next, version, location] = m_slots[i];
 			if (version != entity.version()) {
-				return nullptr;
+				return std::nullopt;
 			}
-			return &location;
+			return location;
 		}
 
 		[[nodiscard]] std::optional<Entity> entity(const EntityIndex index) const noexcept {
