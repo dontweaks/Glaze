@@ -1,5 +1,7 @@
 #pragma once
 
+#include <ranges>
+
 #include "ComponentMeta.h"
 
 namespace glaze::ecs {
@@ -63,6 +65,16 @@ namespace glaze::ecs {
 				return std::nullopt;
 			}
 			return m_components[index].m_desc.name();
+		}
+
+		[[nodiscard]] std::span<const ComponentMeta> components() const noexcept { return m_components; }
+
+		[[nodiscard]] auto table_components() const noexcept {
+			return m_components | std::views::filter([](const auto& meta){ return meta.storage_type() == StorageType::Table; });
+		}
+
+		[[nodiscard]] auto sparse_components() const noexcept {
+			return m_components | std::views::filter([](const auto& meta){ return meta.storage_type() == StorageType::SparseSet; });
 		}
 
 		[[nodiscard]] auto& operator[](this auto& self, const ComponentId id) noexcept { return self.m_components[id.to_index()]; }

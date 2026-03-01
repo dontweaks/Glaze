@@ -1,7 +1,7 @@
 #include <gtest/gtest.h>
 #include <string>
 
-#include "ECS/Storage/SparseArray.h"
+#include "ECS/Storage/SparseSet/SparseArray.h"
 
 namespace glaze::ecs::tests {
 	struct TestIndex {

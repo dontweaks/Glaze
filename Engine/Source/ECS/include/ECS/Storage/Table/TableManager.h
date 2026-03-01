@@ -2,6 +2,7 @@
 
 #include "Utils/Panic.h"
 #include "ECS/Component/ComponentManager.h"
+#include "ECS/Component/ComponentSignature.h"
 
 #include "Table.h"
 

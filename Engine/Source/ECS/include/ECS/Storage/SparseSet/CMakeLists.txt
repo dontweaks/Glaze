@@ -3,6 +3,8 @@ target_sources(ECS
         FILE_SET HEADERS
         BASE_DIRS ${PROJECT_SOURCE_DIR}/include
         FILES
-        Table.h
-        TableManager.h
+        ComponentSparseSet.h
+        SparseArray.h
+        SparseIndex.h
+        SparseSet.h
 )

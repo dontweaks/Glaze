@@ -47,7 +47,7 @@ namespace glaze::ecs {
 
 			auto construct = [&](void* const p) { std::construct_at(static_cast<T*>(p), std::forward<Args>(args)...); };
 
-			if (void* const slot = emplace_back_untyped(construct)) {
+			if (void* const slot = emplace_back(construct)) {
 				return *std::launder(static_cast<T*>(slot));
 			}
 
@@ -58,7 +58,7 @@ namespace glaze::ecs {
 		void push_back(const T& v) noexcept(std::is_nothrow_copy_constructible_v<std::remove_cvref_t<T>>) {
 			assert(m_layout == Layout::of<T>());
 
-			emplace_back_untyped([&](void* const p) noexcept {
+			emplace_back([&](void* const p) noexcept {
 				m_type_ops.copy_construct(p, std::addressof(v));
 			});
 		}
@@ -67,7 +67,7 @@ namespace glaze::ecs {
 		void push_back(T&& v) noexcept {
 			assert(m_layout == Layout::of<T>());
 
-			emplace_back_untyped([&](void* const p) noexcept {
+			emplace_back([&](void* const p) noexcept {
 				m_type_ops.move_construct(p, std::addressof(v));
 			});
 		}
@@ -126,8 +126,35 @@ namespace glaze::ecs {
 			return std::span(get<T>(index), length);
 		}
 
+		template<typename T>
+		void replace(const size_t index, const T& v) noexcept(std::is_nothrow_copy_assignable_v<std::remove_cvref_t<T>>) {
+			assert(index < m_size && "Index out of bounds");
+			copy_replace(index, std::addressof(v));
+		}
+
+		template<typename T> requires (!std::is_lvalue_reference_v<T>)
+		void replace(const size_t index, T&& v) noexcept {
+			assert(index < m_size && "Index out of bounds");
+			move_replace(index, std::addressof(v));
+		}
+
+		template<typename T>
+		T swap_remove(const size_t index) noexcept {
+			assert(m_layout == Layout::of<T>());
+			assert(index < m_size);
+
+			if (zst()) {
+				swap_remove(index);
+				return T{};
+			}
+
+			T out = std::move(*get<T>(index));
+			swap_remove(index);
+			return out;
+		}
+
 		template<typename Init>
-		void* emplace_back_untyped(Init&& init) {
+		void* emplace_back(Init&& init) {
 			if (zst()) {
 				ensure_capacity_for(1);
 				++m_size;
@@ -137,6 +164,20 @@ namespace glaze::ecs {
 			ensure_capacity_for(1);
 			void* const slot = get(m_size);
 			std::forward<Init>(init)(slot);
+			++m_size;
+			return slot;
+		}
+
+		void* move_emplace_back(void* const v) {
+			if (zst()) {
+				ensure_capacity_for(1);
+				++m_size;
+				return nullptr;
+			}
+
+			ensure_capacity_for(1);
+			void* const slot = get(m_size);
+			m_type_ops.move_construct(slot, v);
 			++m_size;
 			return slot;
 		}
@@ -238,7 +279,17 @@ namespace glaze::ecs {
 			}
 		}
 
-		void swap_remove(const size_t index_to_remove, const size_t index_to_keep) {
+		void copy_replace(const size_t index, const void* const value) {
+			assert(index < m_size && "Index out of bounds");
+			m_type_ops.copy_assign(get(index), value);
+		}
+
+		void move_replace(const size_t index, void* const value) noexcept {
+			assert(index < m_size && "Index out of bounds");
+			m_type_ops.move_assign(get(index), value);
+		}
+
+		void swap_remove(const size_t index_to_remove, const size_t index_to_keep) noexcept {
 			assert(index_to_remove < m_size && "Index to remove out of bounds");
 			assert(index_to_keep < m_size && "Index to keep out of bounds");
 
@@ -247,21 +298,26 @@ namespace glaze::ecs {
 				return;
 			}
 
-			const auto ptr_to_keep = get(index_to_keep);
-			const auto ptr_to_remove = get(index_to_remove);
+			void* const ptr_to_keep = get(index_to_keep);
+			void* const ptr_to_remove = get(index_to_remove);
 
 			if (index_to_remove != index_to_keep) {
-				// m_type_ops.swap(ptr_to_keep, ptr_to_remove, 1);
+				m_type_ops.move_assign(ptr_to_remove, ptr_to_keep);
 			}
 
 			m_type_ops.destruct(ptr_to_keep);
+
 			--m_size;
 		}
 
-		//TODO: zst are broken
+		void swap_remove(const size_t index) noexcept {
+			swap_remove(index, m_size - 1);
+		}
+
 		[[nodiscard]] bool zst() const noexcept { return m_layout.size() == 0; }
 		[[nodiscard]] size_t size() const noexcept { return m_size; }
 		[[nodiscard]] size_t capacity() const noexcept { return m_capacity; }
+		[[nodiscard]] bool empty() const noexcept { return m_size == 0; }
 		[[nodiscard]] const Layout& layout() const noexcept { return m_layout; }
 		[[nodiscard]] const TypeOps& type_ops() const noexcept { return m_type_ops; }
 
@@ -270,7 +326,7 @@ namespace glaze::ecs {
 
 	private:
 		template<std::default_initializable T>
-		static T* zst_dummy() noexcept {
+		[[nodiscard]] static T* zst_dummy() noexcept {
 			using U = std::remove_cvref_t<T>;
 			static U dummy{};
 			return std::addressof(dummy);

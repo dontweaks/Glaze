@@ -3,7 +3,7 @@
 #include <ranges>
 
 #include "ECS/Entity.h"
-#include "ECS/Storage/SparseSet.h"
+#include "../Storage/SparseSet/SparseSet.h"
 #include "ECS/Component/Component.h"
 #include "ECS/Component/ComponentSignature.h"
 

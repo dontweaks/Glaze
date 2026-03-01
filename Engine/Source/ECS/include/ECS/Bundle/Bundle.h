@@ -70,6 +70,18 @@ namespace glaze::ecs {
 		);
 	}
 
+	template<Bundle B> requires (!std::is_lvalue_reference_v<B>)
+	constexpr void visit_bundle_enumerate(B&& bundle, auto&& func) {
+		using Tuple = BundleComponentTypes<B>;
+		constexpr size_t N = std::tuple_size_v<Tuple>;
+
+		auto components = std::forward<B>(bundle).components();
+
+		[&]<size_t... I>(std::index_sequence<I...>) {
+			(func(static_cast<size_t>(I), std::forward_like<B>(std::get<I>(components))), ...);
+		}(std::make_index_sequence<N>{});
+	}
+
 	template<Bundle B>
 	constexpr void visit_bundle_types(auto&& func) {
 		[]<Component... Cs>(auto&& f, std::type_identity<std::tuple<Cs...>>) {

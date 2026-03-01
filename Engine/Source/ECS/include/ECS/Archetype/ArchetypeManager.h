@@ -1,8 +1,7 @@
 #pragma once
 
 #include "Archetype.h"
-#include "ECS/Table/TableManager.h"
-#include "ECS/Component/ComponentManager.h"
+#include "ECS/Storage/Table/TableManager.h"
 
 namespace glaze::ecs {
 	struct ArchetypeManager {

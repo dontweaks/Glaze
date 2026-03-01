@@ -3,8 +3,6 @@
 
 #include "ECS/Storage/TypeErasedArray.h"
 
-#include <iostream>
-
 namespace glaze::ecs::tests {
 	struct TestComponent {
 		TestComponent(int x) : x(x) {}
@@ -37,6 +35,7 @@ namespace glaze::ecs::tests {
 		TypeErasedArray array;
 
 		ASSERT_EQ(array.size(), 0);
+		ASSERT_TRUE(array.empty());
 		ASSERT_EQ(array.capacity(), 0);
 		ASSERT_EQ(array.data(), nullptr);
 	}
@@ -46,6 +45,7 @@ namespace glaze::ecs::tests {
 		TypeErasedArray array(utils::Layout::of<TestComponent>(),utils::TypeOps::of<TestComponent>(), CAPACITY);
 
 		ASSERT_EQ(array.size(), 0);
+		ASSERT_TRUE(array.empty());
 		ASSERT_EQ(array.capacity(), CAPACITY);
 		ASSERT_EQ(array.zst(), false);
 		ASSERT_NE(array.data(), nullptr);

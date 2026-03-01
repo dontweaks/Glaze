@@ -1,5 +1,6 @@
 #pragma once
 
+#include "ECS/Storage/Storage.h"
 #include "ECS/Archetype/Archetype.h"
 
 #include "BundleMeta.h"
@@ -15,7 +16,7 @@ namespace glaze::ecs {
 		BundleManager& operator=(BundleManager&& other) = delete;
 
 		template<Bundle B>
-		BundleId register_bundle(ComponentManager& component_manager) {
+		BundleId register_bundle(ComponentManager& component_manager, Storage& m_storage) {
 			using U = std::remove_cvref_t<B>;
 			constexpr auto type_id = utils::type_id_ct<BundleKeyType<U>>();
 			const auto it = m_bundle_map.find(type_id);
@@ -26,6 +27,11 @@ namespace glaze::ecs {
 			const auto bundle_id = BundleId::from_index(m_bundles.size());
 			m_bundles.push_back(BundleMeta::create<U>(bundle_id, component_manager));
 			m_bundle_map.emplace(type_id, bundle_id);
+
+			for (const auto& component_meta : component_manager.sparse_components()) {
+				m_storage.ensure_component(component_meta);
+			}
+
 			return bundle_id;
 		}
 

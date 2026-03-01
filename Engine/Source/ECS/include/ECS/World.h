@@ -3,7 +3,7 @@
 #include "Bundle/BundleManager.h"
 #include "Component/ComponentManager.h"
 #include "Archetype/ArchetypeManager.h"
-#include "Table/TableManager.h"
+#include "Storage/Storage.h"
 
 #include "Entity.h"
 
@@ -12,7 +12,7 @@ namespace glaze::ecs {
 		Entity create_entity() {
 			const auto entity = m_entity_manager.create_entity();
 
-			auto& table = m_table_manager.empty_table();
+			auto& table = m_storage.empty_table();
 			const auto table_row = table.add_entity(entity);
 
 			auto& archetype = m_archetype_manager.empty_archetype();
@@ -32,20 +32,17 @@ namespace glaze::ecs {
 				bundle_id,
 				m_bundle_manager,
 				m_component_manager,
-				m_table_manager);
+				m_storage.table_manager);
 
 			auto& archetype = m_archetype_manager[archetype_id];
-			auto& table = m_table_manager[table_id];
+			auto& table = m_storage[table_id];
 
 			const auto table_row = table.add_entity(entity);
 			const auto location = archetype.add_entity(entity, table_row);
 
 			m_entity_manager.set_location(entity, location);
 
-			visit_bundle(std::forward<B>(bundle), [&]<typename C>(C&& c) {
-				using T = std::remove_cvref_t<C>;
-				//storage.write(c);
-			});
+			m_storage.write_bundle(std::forward<B>(bundle), entity, m_bundle_manager[bundle_id]);
 
 			return entity;
 		}
@@ -78,7 +75,7 @@ namespace glaze::ecs {
 
 		template<Bundle B>
 		BundleId register_bundle() {
-			return m_bundle_manager.register_bundle<B>(m_component_manager);
+			return m_bundle_manager.register_bundle<B>(m_component_manager, m_storage);
 		}
 
 		template<Component C>
@@ -97,7 +94,7 @@ namespace glaze::ecs {
 		[[nodiscard]] auto& component_manager(this auto& self) noexcept { return self.m_component_manager; }
 		[[nodiscard]] auto& archetype_manager(this auto& self) noexcept { return self.m_archetype_manager; }
 		[[nodiscard]] auto& bundle_manager(this auto& self) noexcept { return self.m_bundle_manager; }
-		[[nodiscard]] auto& table_manager(this auto& self) noexcept { return self.m_table_manager; }
+		[[nodiscard]] auto& storage(this auto& self) noexcept { return self.m_storage; }
 
 	private:
 		WorldId m_id{0};
@@ -106,6 +103,6 @@ namespace glaze::ecs {
 		ComponentManager m_component_manager;
 		ArchetypeManager m_archetype_manager;
 		BundleManager m_bundle_manager;
-		TableManager m_table_manager;
+		Storage m_storage;
 	};
 }

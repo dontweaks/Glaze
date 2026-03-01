@@ -16,6 +16,7 @@ namespace glaze::ecs {
 	};
 
 	struct Entity {
+		Entity() = default;
 		constexpr explicit Entity(const EntityIndex index, const EntityVersion version = FIRST_ENTITY_VERSION) noexcept
 			: m_index(index), m_version(version) {
 		}

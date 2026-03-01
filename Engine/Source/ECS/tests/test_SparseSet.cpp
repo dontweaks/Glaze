@@ -2,7 +2,7 @@
 #include <string>
 #include <algorithm>
 
-#include "ECS/Storage/SparseSet.h"
+#include "ECS/Storage/SparseSet/SparseSet.h"
 
 namespace glaze::ecs::tests {
 	struct TestIndex {
