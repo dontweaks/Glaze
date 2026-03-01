@@ -27,7 +27,7 @@ namespace glaze::ecs {
 						utils::panic("Trying to write bundle to non existing column");
 					}
 					auto& column = column_opt->get();
-					column.push_back(std::forward<C>(c));
+					column.insert(location.table_row.to_index(), std::forward_like<C>(c));
 				} else {
 					const auto sparse_set_opt = sparse_sets.at(component_id);
 					if (!sparse_set_opt.has_value()) {

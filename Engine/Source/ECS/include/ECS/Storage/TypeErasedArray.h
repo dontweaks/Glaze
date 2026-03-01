@@ -3,6 +3,7 @@
 #include <cassert>
 
 #include "Utils/Layout.h"
+#include "Utils/Panic.h"
 #include "Utils/TypeOps.h"
 
 namespace glaze::ecs {
@@ -72,6 +73,28 @@ namespace glaze::ecs {
 			emplace_back_untyped([&](void* const p) noexcept {
 				m_type_ops.move_construct(p, std::addressof(v));
 			});
+		}
+
+		template<typename T>
+		void insert(const size_t index, const T& v) {
+			assert(m_layout == Layout::of<T>());
+			assert(index <= m_size && "Index out of bounds");
+			if (index == m_size) {
+				push_back(v);
+			} else {
+				replace(index, v);
+			}
+		}
+
+		template<typename T> requires (!std::is_lvalue_reference_v<T>)
+		void insert(const size_t index, T&& v) noexcept {
+			assert(m_layout == Layout::of<T>());
+			assert(index <= m_size && "Index out of bounds");
+			if (index == m_size) {
+				push_back(std::forward<T>(v));
+			} else {
+				replace(index, std::forward<T>(v));
+			}
 		}
 
 		template<typename T>
@@ -350,7 +373,11 @@ namespace glaze::ecs {
 
 		[[nodiscard]] std::byte* allocate_bytes(const size_t capacity) const noexcept {
 			const size_t bytes = capacity * m_layout.size();
-			return static_cast<std::byte*>(operator new(bytes, static_cast<std::align_val_t>(m_layout.align()), std::nothrow));
+			const auto data = static_cast<std::byte*>(operator new(bytes, static_cast<std::align_val_t>(m_layout.align()), std::nothrow));
+			if (!data) [[unlikely]] {
+				utils::panic("TypeErasedArray: allocation of {} bytes failed", capacity * m_layout.size());
+			}
+			return data;
 		}
 
 		void deallocate_bytes(std::byte* ptr) const noexcept {

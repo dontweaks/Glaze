@@ -2,13 +2,19 @@
 
 #include "ECS/Entity.h"
 #include "ECS/Storage/TypeErasedArray.h"
-#include "ECs/Storage/SparseSet/SparseSet.h"
+#include "ECS/Storage/SparseSet/SparseSet.h"
 
 namespace glaze::ecs {
 	struct Table {
 		explicit Table(const TableId id) noexcept
 			: m_id(id) {
 		}
+
+		Table(const Table& other) = delete;
+		Table& operator=(const Table& other) = delete;
+
+		Table(Table&& other) noexcept = default;
+		Table& operator=(Table&& other) noexcept = default;
 
 		void add_column(const ComponentMeta& component_meta) {
 			m_columns.emplace(component_meta.id(), component_meta.layout(), component_meta.type_ops());

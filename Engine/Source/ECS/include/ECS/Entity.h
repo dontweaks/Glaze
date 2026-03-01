@@ -147,7 +147,7 @@ namespace glaze::ecs {
 	private:
 		std::vector<Slot> m_slots;
 		size_t m_destroyed = 0;
-		EntityIndex m_head = utils::null_id;;
+		EntityIndex m_head = utils::null_id;
 	};
 }
 
