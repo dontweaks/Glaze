@@ -1,5 +1,7 @@
 #pragma once
 
+#include <cassert>
+
 #include "Utils/Layout.h"
 #include "Utils/TypeOps.h"
 
@@ -47,7 +49,7 @@ namespace glaze::ecs {
 
 			auto construct = [&](void* const p) { std::construct_at(static_cast<T*>(p), std::forward<Args>(args)...); };
 
-			if (void* const slot = emplace_back(construct)) {
+			if (void* const slot = emplace_back_untyped(construct)) {
 				return *std::launder(static_cast<T*>(slot));
 			}
 
@@ -58,7 +60,7 @@ namespace glaze::ecs {
 		void push_back(const T& v) noexcept(std::is_nothrow_copy_constructible_v<std::remove_cvref_t<T>>) {
 			assert(m_layout == Layout::of<T>());
 
-			emplace_back([&](void* const p) noexcept {
+			emplace_back_untyped([&](void* const p) noexcept {
 				m_type_ops.copy_construct(p, std::addressof(v));
 			});
 		}
@@ -67,7 +69,7 @@ namespace glaze::ecs {
 		void push_back(T&& v) noexcept {
 			assert(m_layout == Layout::of<T>());
 
-			emplace_back([&](void* const p) noexcept {
+			emplace_back_untyped([&](void* const p) noexcept {
 				m_type_ops.move_construct(p, std::addressof(v));
 			});
 		}
@@ -154,7 +156,7 @@ namespace glaze::ecs {
 		}
 
 		template<typename Init>
-		void* emplace_back(Init&& init) {
+		void* emplace_back_untyped(Init&& init) {
 			if (zst()) {
 				ensure_capacity_for(1);
 				++m_size;

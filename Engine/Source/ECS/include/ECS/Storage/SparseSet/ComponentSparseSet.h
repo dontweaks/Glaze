@@ -15,12 +15,12 @@ namespace glaze::ecs {
 		ComponentSparseSet(ComponentSparseSet&& component) = default;
 		ComponentSparseSet& operator=(ComponentSparseSet&& component) = default;
 
-		template<typename T>
+		template<Component T>
 		void insert(const Entity entity, T&& data) {
 			insert_untyped(entity, std::addressof(data));
 		}
 
-		template<typename T>
+		template<Component T>
 		[[nodiscard]] std::optional<std::reference_wrapper<T>> get(const Entity entity) noexcept {
 			using U = std::remove_cvref_t<T>;
 			return m_entities.at(entity.index()).transform([this](const auto table_row_ref) {
@@ -29,7 +29,7 @@ namespace glaze::ecs {
 			});
 		}
 
-		template<typename T>
+		template<Component T>
 		[[nodiscard]] std::optional<std::reference_wrapper<const T>> get(const Entity entity) const noexcept {
 			using U = std::remove_cvref_t<T>;
 			return m_entities.at(entity.index()).transform([this](const auto table_row_ref) {
@@ -38,7 +38,7 @@ namespace glaze::ecs {
 			});
 		}
 
-		template<typename T>
+		template<Component T>
 		[[nodiscard]] std::optional<T> swap_remove_and_destroy(const Entity entity) noexcept {
 			using U = std::remove_cvref_t<T>;
 

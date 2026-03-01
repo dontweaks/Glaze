@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../Storage/SparseSet/SparseSet.h"
+#include "ECS/Storage/SparseSet/SparseSet.h"
 #include "ECS/Component/ComponentManager.h"
 
 #include "Bundle.h"

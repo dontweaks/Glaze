@@ -3,8 +3,6 @@
 #include <print>
 #include <iostream>
 
-#include "ECS/Storage/SparseSet.h"
-
 struct Position {
 	static constexpr auto STORAGE_TYPE = glaze::ecs::StorageType::SparseSet;
 
@@ -16,6 +14,8 @@ struct Position {
 		this->y = y;
 		std::println("Position(float x, float y)");
 		std::flush(std::cout);
+
+		ptr = new int;
 	}
 
 	Position() {
@@ -26,6 +26,8 @@ struct Position {
 	~Position() {
 		std::println("~Position()");
 		std::flush(std::cout);
+
+		delete ptr;
 	}
 
 	Position(const Position& v) {
@@ -35,7 +37,8 @@ struct Position {
 		std::flush(std::cout);
 	}
 
-	Position(Position&& v) {
+	Position(Position&& v) noexcept {
+		ptr = std::exchange(v.ptr, nullptr);
 		x = v.x;
 		y = v.y;
 		std::println("Position(Position&&)");
@@ -47,9 +50,11 @@ struct Position {
 		y = v.y;
 		std::println("Position& operator=(const Position& v)");
 		std::flush(std::cout);
+		return *this;
 	}
 
-	Position& operator=(Position&& v) {
+	Position& operator=(Position&& v) noexcept {
+		ptr = std::exchange(v.ptr, nullptr);
 		x = v.x;
 		y = v.y;
 		std::println("Position& operator=(Position&& v)");
@@ -61,6 +66,8 @@ struct Position {
 	{
 		std::println("{}, {}", x, y);
 	}
+
+	int* ptr;
 };
 
 struct Velocity {
@@ -91,7 +98,7 @@ struct Velocity {
 		std::flush(std::cout);
 	}
 
-	Velocity(Velocity&& v) {
+	Velocity(Velocity&& v) noexcept {
 		x = v.x;
 		y = v.y;
 		std::println("Velocity(Velocity&&)");
@@ -103,13 +110,15 @@ struct Velocity {
 		y = v.y;
 		std::println("Velocity& operator=(const Velocity& v)");
 		std::flush(std::cout);
+		return *this;
 	}
 
-	Velocity& operator=(Velocity&& v) {
+	Velocity& operator=(Velocity&& v) noexcept {
 		x = v.x;
 		y = v.y;
 		std::println("Velocity& operator=(Velocity&& v)");
 		std::flush(std::cout);
+		return *this;
 	}
 
 	void print()
@@ -153,7 +162,11 @@ int main() {
 	//Velocity v{1.0f, 1.0f};
 	//w.create_entity(p, v);
 	//w.create_entity(Position{}, Velocity{}, Render{});
-	w.create_entity(TestA{});
+	//w.create_entity(TestA{});
+	//w.create_entity(TestA{});
+	//w.create_entity(TestA{});
+
+	w.create_entity(Position{1.0f, 2.0f}, Velocity{1.0f, 2.0f});
 
 	return 0;
 }

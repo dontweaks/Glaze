@@ -42,7 +42,11 @@ namespace glaze::ecs {
 
 			m_entity_manager.set_location(entity, location);
 
-			m_storage.write_bundle(std::forward<B>(bundle), entity, m_bundle_manager[bundle_id]);
+			m_storage.write_bundle(
+				std::forward<B>(bundle),
+				entity,
+				location,
+				m_bundle_manager[bundle_id]);
 
 			return entity;
 		}

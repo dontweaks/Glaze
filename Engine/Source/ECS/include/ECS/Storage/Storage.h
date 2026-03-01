@@ -15,17 +15,23 @@ namespace glaze::ecs {
 		}
 
 		template<Bundle B>
-		void write_bundle(B&& bundle, const Entity entity, const BundleMeta& bundle_meta) {
+		void write_bundle(B&& bundle, const Entity entity, const EntityLocation& location, const BundleMeta& bundle_meta) {
 			visit_bundle_enumerate(std::forward<B>(bundle), [&]<Component C>(const size_t index, C&& c) {
 				using T = std::remove_cvref_t<C>;
 				const auto component_id = bundle_meta.components()[index];
 
 				if (get_storage_type<T>() == StorageType::Table) {
-					//TODO: handle table insert
+					auto& table = table_manager.at(location.table_id);
+					const auto column_opt = table.at(component_id);
+					if (!column_opt.has_value()) {
+						utils::panic("Trying to write bundle to non existing column");
+					}
+					auto& column = column_opt->get();
+					column.push_back(std::forward<C>(c));
 				} else {
 					const auto sparse_set_opt = sparse_sets.at(component_id);
 					if (!sparse_set_opt.has_value()) {
-						utils::panic("trying to write bundle to non existing sparse set");
+						utils::panic("Trying to write bundle to non existing sparse set");
 					}
 
 					auto& sparse_set = sparse_set_opt->get();

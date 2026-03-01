@@ -60,7 +60,7 @@ namespace glaze::ecs {
 				utils::panic("Table id {} hasn't been registered yet", id.get());
 			}
 
-			return self.m_tables.at(index);
+			return self.m_tables[index];
 		}
 
 		[[nodiscard]] size_t size() const noexcept { return m_tables.size(); }
