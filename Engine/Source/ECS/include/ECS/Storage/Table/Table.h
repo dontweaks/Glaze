@@ -20,6 +20,23 @@ namespace glaze::ecs {
 			m_columns.emplace(component_meta.id(), component_meta.layout(), component_meta.type_ops());
 		}
 
+		//returns a valid entity that has been put into the removed entity place and a table row
+		//nullopt if last because there's no valid entity then
+		[[nodiscard]] std::pair<std::optional<Entity>, TableRow> move_to(Table& dst, const TableRow table_row) {
+			const auto index = table_row.to_index();
+			assert(index < entity_count());
+			const bool is_last = index == entity_count() - 1;
+
+			const auto new_table_row = dst.add_entity(utils::swap_remove(m_entities, index));
+			for (const auto& [component_id, src_column] : m_columns.iter()) {
+				auto& new_column = utils::value_or_panic(dst.at(component_id));
+				new_column.move_insert(new_table_row.to_index(), src_column.get(index));
+				src_column.swap_remove(index);
+			}
+
+			return { is_last ? std::nullopt : std::make_optional(m_entities[index]), new_table_row };
+		}
+
 		[[nodiscard]] TableRow add_entity(const Entity entity) {
 			m_entities.push_back(entity);
 			return TableRow::from_index(m_entities.size() - 1);
@@ -46,11 +63,11 @@ namespace glaze::ecs {
 			return self.m_columns[id];
 		}
 
-		[[nodiscard]] auto at(const ComponentId id) noexcept {
+		[[nodiscard]] utils::optional_ref<TypeErasedArray> at(const ComponentId id) noexcept {
 			return m_columns.at(id);
 		}
 
-		[[nodiscard]] auto at(const ComponentId id) const noexcept {
+		[[nodiscard]] utils::optional_ref<const TypeErasedArray> at(const ComponentId id) const noexcept {
 			return m_columns.at(id);
 		}
 

@@ -207,6 +207,17 @@ namespace glaze::ecs {
 			return slot;
 		}
 
+		void* move_insert(const size_t index, void* const v) noexcept {
+			assert(index <= m_size && "Index out of bounds");
+
+			if (index == m_size) {
+				return move_emplace_back(v);
+			}
+
+			move_replace(index, v);
+			return get(index);
+		}
+
 		[[nodiscard]] void* get(const size_t index) noexcept {
 			if (zst()) {
 				return nullptr;

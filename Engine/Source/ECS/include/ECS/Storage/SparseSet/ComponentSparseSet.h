@@ -21,7 +21,7 @@ namespace glaze::ecs {
 		}
 
 		template<Component T>
-		[[nodiscard]] std::optional<std::reference_wrapper<T>> get(const Entity entity) noexcept {
+		[[nodiscard]] utils::optional_ref<T> get(const Entity entity) noexcept {
 			using U = std::remove_cvref_t<T>;
 			return m_entities.at(entity.index()).transform([this](const auto table_row_ref) {
 				const auto dense_index = table_row_ref.get();
@@ -30,7 +30,7 @@ namespace glaze::ecs {
 		}
 
 		template<Component T>
-		[[nodiscard]] std::optional<std::reference_wrapper<const T>> get(const Entity entity) const noexcept {
+		[[nodiscard]] utils::optional_ref<const T> get(const Entity entity) const noexcept {
 			using U = std::remove_cvref_t<T>;
 			return m_entities.at(entity.index()).transform([this](const auto table_row_ref) {
 				const auto dense_index = table_row_ref.get();

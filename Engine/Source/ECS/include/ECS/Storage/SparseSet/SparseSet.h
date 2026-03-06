@@ -57,15 +57,15 @@ namespace glaze::ecs {
 			});
 		}
 
-		[[nodiscard]] std::optional<std::reference_wrapper<V>> at(const I index) noexcept {
+		[[nodiscard]] utils::optional_ref<V> at(const I index) noexcept {
 			return m_sparse.at(index).transform([this](const size_t dense_index) {
-				return std::reference_wrapper<V>{m_dense[dense_index]};
+				return std::ref(m_dense[dense_index]);
 			});
 		}
 
-		[[nodiscard]] std::optional<std::reference_wrapper<const V>> at(const I index) const noexcept {
+		[[nodiscard]] utils::optional_ref<const V> at(const I index) const noexcept {
 			return m_sparse.at(index).transform([this](const size_t dense_index) {
-				return std::reference_wrapper<const V>{m_dense[dense_index]};
+				return std::cref(m_dense[dense_index]);
 			});
 		}
 

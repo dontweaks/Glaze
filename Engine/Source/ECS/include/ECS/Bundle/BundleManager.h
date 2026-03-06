@@ -51,7 +51,7 @@ namespace glaze::ecs {
 			return it->second;
 		}
 
-		[[nodiscard]] std::span<const StorageType> storage_types(const BundleId id) const noexcept {
+		[[nodiscard]] auto storage_types(const BundleId id) const noexcept {
 			const auto index = id.to_index();
 			if (index >= m_bundles.size()) {
 				utils::panic("Bundle id {} is out of range", id.get());

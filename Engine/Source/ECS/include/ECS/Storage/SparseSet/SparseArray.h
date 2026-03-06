@@ -10,6 +10,8 @@
 
 #include "SparseIndex.h"
 
+#include "Utils/Optional.h"
+
 namespace glaze::ecs {
 	template<SparseIndex I, std::move_constructible V, size_t PAGE_SIZE = 4096> requires (PAGE_SIZE > 0)
 	struct SparseArray {
@@ -74,7 +76,7 @@ namespace glaze::ecs {
 			m_pages.reserve(pages_for_span(span));
 		}
 
-		[[nodiscard]] std::optional<std::reference_wrapper<V>> at(const I index) noexcept {
+		[[nodiscard]] utils::optional_ref<V> at(const I index) noexcept {
 			const size_t pos = index.to_index();
 			Page* page = try_page(page_index(pos));
 			if (!page) {
@@ -86,10 +88,10 @@ namespace glaze::ecs {
 				return std::nullopt;
 			}
 
-			return std::optional<std::reference_wrapper<V>>{std::ref(page->get(off))};
+			return utils::optional_ref<V>{std::ref(page->get(off))};
 		}
 
-		[[nodiscard]] std::optional<std::reference_wrapper<const V>> at(const I index) const noexcept {
+		[[nodiscard]] utils::optional_ref<const V> at(const I index) const noexcept {
 			const size_t pos = index.to_index();
 			const Page* page = try_page(page_index(pos));
 			if (!page) {
@@ -101,7 +103,7 @@ namespace glaze::ecs {
 				return std::nullopt;
 			}
 
-			return std::optional<std::reference_wrapper<const V>>{std::cref(page->get(off))};
+			return utils::optional_ref<const V>{std::cref(page->get(off))};
 		}
 
 		[[nodiscard]] auto& operator[](this auto& self, const I index) noexcept {
