@@ -72,6 +72,7 @@ namespace glaze::ecs {
 		//nullopt if last because there's no valid entity then
 		[[nodiscard]] std::pair<std::optional<Entity>, TableRow> remove_entity(const ArchetypeRow row) noexcept {
 			const auto index = row.to_index();
+			assert(m_entities.size() > index);
 			const bool is_last = index == entity_count() - 1;
 			const auto [entity, table_row] = utils::swap_remove(m_entities, index);
 			return { is_last ? std::nullopt : std::make_optional(m_entities[index].entity), table_row };

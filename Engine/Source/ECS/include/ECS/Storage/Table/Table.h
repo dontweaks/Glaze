@@ -43,18 +43,20 @@ namespace glaze::ecs {
 		}
 
 		[[nodiscard]] std::optional<Entity> remove_entity(const TableRow row) noexcept {
+			const auto index = row.to_index();
+			assert(m_entities.size() > index);
 			for (auto& column : m_columns.values()) {
-				column.swap_remove(row.to_index());
+				column.swap_remove(index);
 			}
 
-			const bool is_last = row.to_index() == m_entities.size() - 1;
-			utils::swap_remove(m_entities, row.to_index());
+			const bool is_last = index == m_entities.size() - 1;
+			utils::swap_remove(m_entities, index);
 
 			if (is_last) {
 				return std::nullopt;
 			}
 
-			return m_entities[row.to_index()];
+			return m_entities[index];
 		}
 
 		[[nodiscard]] TableId id() const noexcept { return m_id; }

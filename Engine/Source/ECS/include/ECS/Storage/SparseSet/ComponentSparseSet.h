@@ -25,7 +25,7 @@ namespace glaze::ecs {
 			using U = std::remove_cvref_t<T>;
 			return m_entities.at(entity.index()).transform([this](const auto table_row_ref) {
 				const auto dense_index = table_row_ref.get();
-				return *m_components.get<U>(dense_index.to_index());
+				return std::ref(*m_components.get<U>(dense_index.to_index()));
 			});
 		}
 
@@ -34,7 +34,7 @@ namespace glaze::ecs {
 			using U = std::remove_cvref_t<T>;
 			return m_entities.at(entity.index()).transform([this](const auto table_row_ref) {
 				const auto dense_index = table_row_ref.get();
-				return *m_components.get<U>(dense_index.to_index());
+				return std::cref(*m_components.get<U>(dense_index.to_index()));
 			});
 		}
 
